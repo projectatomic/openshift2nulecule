@@ -1,72 +1,77 @@
+import logging
+from subprocess import Popen, PIPE
+import anymarkup
+from copy import deepcopy
 
-import requests
+logger = logging.getLogger(__name__)
+
 
 class OpenshiftClient(object):
-    def __init__(self, url, token, project, api_version="v1"):
-        self.url = url
-        self.token = token
-        self.api_version = api_version
-        self.project = project
-
-        self.openshift_api = "{url}/oapi/{version}".format(
-                url=self.url,
-                version=self.api_version)
-        
-        self.kube_api = "{url}/api/{version}".format(
-                url=self.url,
-                version=self.api_version)
-
-        print("openshift_api = %s" % self.openshift_api)
-        print("kube_api = %s" % self.kube_api)
-
-        self.kube_resources = self.get_kube_resources()
-        self.openshift_resources = self.get_kube_resources()
-
-    def get_kube_resources(self):
-        res = self._get(self.kube_api)
-        return res.json()["resources"]
-
-    def get_openshift_resources(self):
-        res = self._get(self.openshift_api)
-        return res.json()["resources"]
-    
-    def export(self, kind):
-        if kind in [r["name"] for r in self.kube_resources]:
-            url = self.kube_api
-        elif kind in [r["name"] for r in self.openshift_resources]:
-            url = self.openshift_api
-        else:
-            raise Exception("Unknown kind {}".format(kind))
-
-        url += "/namespaces/{namespace}/{kind}".format(
-                    namespace=self.project,
-                    kind=kind)
-        res = self._get(url)
-        return res.json()
 
     def export_all(self):
         """
-        !!! only kubernetes things for now
-        TODO
+        only kubernetes things for now
         """
-        # objects to export
-        objects = ["pods",
-                   "replicationcontrollers",
-                   "persistentvolumeclaims",
-                   "services"]
+        # resources to export
+        resources = ["pods",
+                     "replicationcontrollers",
+                     "persistentvolumeclaims",
+                     "services"]
+       
+        # output of this export is kind List
+        cmd = ["oc", "export", ",".join(resources), "-o", "json"]
+        ec, stdout, stderr = self._run_cmd(cmd)
+        return anymarkup.parse(stdout, format="json", force_types=None)
 
-        res = {}
-        for o in objects:
-            res[o] = self.export(o)
 
-        return res
+    def remove_securityContext(self, kind_list):
+        """
+        Remove securityContext from all objects in kind_list.
 
+        Args:
+            kind_list (dict): serialized List of openshift objects
 
-    def _get(self, url, params=None):
-        if not params:
-            params = {}
+        Returns:
+            dict: serialized List of object striped from securityContext
+        """
+        
+        objs = deepcopy(kind_list)
+        for obj in objs['items']:
+            #   remove securityContext from pods
+            if obj['kind'].lower() == 'pod':
+                if "securityContext" in obj['spec'].keys():
+                    del obj['spec']["securityContext"]
+                for c in obj['spec']["containers"]:
+                    if "securityContext" in c.keys():
+                        del c["securityContext"]
+        return objs
 
-        headers = {"Authorization": "Bearer {0}".format(self.token)}
+    def _run_cmd(self, cmd, checkexitcode=True, stdin=None):
+        """
+        Runs a command with its arguments and returns the results. If
+        the command gives a bad exit code then a CalledProcessError
+        exceptions is raised, just like if check_call() were called.
+        ":Args:
+            checkexitcode: Raise exception on bad exit code
+            stdin: input string to pass to stdin of the command
+        Returns:
+            ec:     The exit code from the command
+            stdout: stdout from the command
+            stderr: stderr from the command
+        """
+        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        stdout, stderr = p.communicate(stdin)
+        ec = p.returncode
+        logger.debug("\n<<< stdout >>>\n%s<<< end >>>\n", stdout)
+        logger.debug("\n<<< stderr >>>\n%s<<< end >>>\n", stderr)
 
-        requests.packages.urllib3.disable_warnings() 
-        return requests.get(url, params=params, headers=headers, verify=False)
+        # If the exit code is an error then raise exception unless
+        # we were asked not to.
+        if checkexitcode:
+            if ec != 0:
+                printErrorStatus("cmd failed: %s" % str(cmd))  # For cockpit
+                raise AtomicAppUtilsException(
+                    "cmd: %s failed: \n%s" % (str(cmd), stderr))
+
+        return ec, stdout, stderr
+
