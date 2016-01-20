@@ -58,7 +58,11 @@ class CLI():
                     }
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
-if __name__ == "__main__":
+def main():
     cli = CLI()
     cli.run()
+
+
+if __name__ == "__main__":
+    main()
 
