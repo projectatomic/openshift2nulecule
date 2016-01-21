@@ -70,12 +70,14 @@ class CLI():
         anymarkup.serialize_file(artifacts, filepath, format="json")
 
         nulecule = {"specversion": "0.0.2",
-                    "id": args.app_name,
-                    "metadata": {"name": args.app_name},
-                    "graph": [{"name": args.app_name,
+                    "id": args.project,
+                    "metadata": {"name": args.project},
+                    "graph": [{"name": args.project,
                                "artifacts": {"kubernetes": nulecule_artifacts}}]
                     }
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
+
+        logger.info("Nulecule application created in {}".format(nulecule_dir))
 
 def main():
     cli = CLI()
@@ -84,4 +86,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
