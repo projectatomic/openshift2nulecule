@@ -6,7 +6,7 @@ import argparse
 import logging
 import anymarkup
 
-from Openshift2Nulecule.openshift import OpenshiftClient
+from openshift2nulecule.openshift import OpenshiftClient
 
 logger = logging.getLogger()
 logger.handlers = []

@@ -25,10 +25,10 @@ setup(
     description='A tool to create Nulecule from OpenShift',
     author='Tomas Kral',
     author_email='tkral@redhat.com',
-    url='https://github.com/kadel/Openshift2Nulecule',
+    url='https://github.com/kadel/openshift2nulecule',
     license="LGPL3",
     entry_points={
-        'console_scripts': ['openshift2nulecule=Openshift2Nulecule.cli.main:main'],
+        'console_scripts': ['openshift2nulecule=openshift2nulecule.cli.main:main'],
     },
 
     packages=find_packages(),
