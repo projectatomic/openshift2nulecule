@@ -17,8 +17,9 @@ class CLI():
                                       " will be created (must not exist)",
                                  type=str,
                                  required=True)
-        self.parser.add_argument("--app-name",
-                                 help="Name of new Nulecule application",
+        self.parser.add_argument("--project",
+                                 help="OpenShift project to export as Nulecule"
+                                      " application",
                                  type=str,
                                  required=True)
 
@@ -29,23 +30,23 @@ class CLI():
 
         if os.path.exists(nulecule_dir):
             raise Exception("{} must not exist".format(nulecule_dir))
-                
+
         artifacts_dir = os.path.join(nulecule_dir, "artifacts", "kubernetes")
         nulecule_file = os.path.join(nulecule_dir, "Nulecule")
 
         os.makedirs(artifacts_dir)
-     
+
         oc = OpenshiftClient()
         artifacts = oc.export_all()
-        
-        # remove  ugly thing to do :-( 
-        #I don't know hot to get securityContext and Selinux
-        #o work on k8s for now :-(
+
+        # remove  ugly thing to do :-(
+        # I don't know hot to get securityContext and Selinux
+        # to work on k8s for now :-(
         artifacts = oc.remove_securityContext(artifacts)
-        
+
         # list of artifact for Nulecule file
         nulecule_artifacts = []
-        
+
         filepath = os.path.join(artifacts_dir, "artifacts.json")
         nulecule_artifacts.append("file://{}".format(os.path.relpath(filepath, nulecule_dir)))
         anymarkup.serialize_file(artifacts, filepath, format="json")
