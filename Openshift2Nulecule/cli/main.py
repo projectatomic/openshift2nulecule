@@ -8,6 +8,14 @@ import anymarkup
 
 from Openshift2Nulecule.openshift import OpenshiftClient
 
+logger = logging.getLogger()
+logger.handlers = []
+logger.setLevel(logging.INFO)
+ch = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
+
 
 class CLI():
     def __init__(self):
@@ -22,9 +30,19 @@ class CLI():
                                       " application",
                                  type=str,
                                  required=True)
+        self.parser.add_argument("--oc",
+                                 help="Path to oc binary",
+                                 type=str,
+                                 required=False)
+        self.parser.add_argument("--debug",
+                                 help="Show debug messages",
+                                 action='store_true')
 
     def run(self):
         args = self.parser.parse_args()
+
+        if args.debug:
+            logger.setLevel(logging.DEBUG)
 
         nulecule_dir = os.path.abspath(args.output)
 
@@ -34,9 +52,7 @@ class CLI():
         artifacts_dir = os.path.join(nulecule_dir, "artifacts", "kubernetes")
         nulecule_file = os.path.join(nulecule_dir, "Nulecule")
 
-        os.makedirs(artifacts_dir)
-
-        oc = OpenshiftClient()
+        oc = OpenshiftClient(oc=args.oc)
         artifacts = oc.export_all()
 
         # remove  ugly thing to do :-(
@@ -46,6 +62,8 @@ class CLI():
 
         # list of artifact for Nulecule file
         nulecule_artifacts = []
+
+        os.makedirs(artifacts_dir)
 
         filepath = os.path.join(artifacts_dir, "artifacts.json")
         nulecule_artifacts.append("file://{}".format(os.path.relpath(filepath, nulecule_dir)))

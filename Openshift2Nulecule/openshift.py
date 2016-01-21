@@ -8,6 +8,15 @@ logger = logging.getLogger(__name__)
 
 class OpenshiftClient(object):
 
+    # path to oc binary
+    oc = None
+
+    def __init__(self, oc=None):
+        if oc:
+            self.oc = oc
+        else:
+            self.oc = "oc"
+
     def export_all(self):
         """
         only kubernetes things for now
@@ -19,7 +28,7 @@ class OpenshiftClient(object):
                      "services"]
        
         # output of this export is kind List
-        cmd = ["oc", "export", ",".join(resources), "-o", "json"]
+        cmd = [self.oc, "export", ",".join(resources), "-o", "json"]
         ec, stdout, stderr = self._run_cmd(cmd)
         return anymarkup.parse(stdout, format="json", force_types=None)
 
@@ -69,8 +78,8 @@ class OpenshiftClient(object):
         # we were asked not to.
         if checkexitcode:
             if ec != 0:
-                printErrorStatus("cmd failed: %s" % str(cmd))  # For cockpit
-                raise AtomicAppUtilsException(
+                logger.error("cmd failed: %s" % str(cmd))
+                raise Exception(
                     "cmd: %s failed: \n%s" % (str(cmd), stderr))
 
         return ec, stdout, stderr
