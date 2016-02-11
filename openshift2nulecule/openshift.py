@@ -22,8 +22,9 @@ class OpenshiftClient(object):
         only kubernetes things for now
         """
         # resources to export
-        resources = ["pods",
-                     "replicationcontrollers",
+        # don't export pods for now
+        # replication controllers should be enough
+        resources = ["replicationcontrollers",
                      "persistentvolumeclaims",
                      "services"]
        
@@ -68,6 +69,7 @@ class OpenshiftClient(object):
             stdout: stdout from the command
             stderr: stderr from the command
         """
+        logger.debug("running cmd %s", cmd)
         p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         stdout, stderr = p.communicate(stdin)
         ec = p.returncode
