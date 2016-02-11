@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import logging
 from subprocess import Popen, PIPE
 import anymarkup
@@ -24,15 +26,15 @@ class OpenshiftClient(object):
         # resources to export
         # don't export pods for now
         # replication controllers should be enough
-        resources = ["replicationcontrollers",
-                     "persistentvolumeclaims",
+        # Ideally this should detect pods that are not created
+        # by replication controller and only export those.
+        resources = ["replicationcontrollers", "persistentvolumeclaims",
                      "services"]
-       
+
         # output of this export is kind List
         cmd = [self.oc, "export", ",".join(resources), "-o", "json"]
         ec, stdout, stderr = self._run_cmd(cmd)
         return anymarkup.parse(stdout, format="json", force_types=None)
-
 
     def remove_securityContext(self, kind_list):
         """
@@ -44,7 +46,7 @@ class OpenshiftClient(object):
         Returns:
             dict: serialized List of object striped from securityContext
         """
-        
+
         objs = deepcopy(kind_list)
         for obj in objs['items']:
             #   remove securityContext from pods
@@ -81,8 +83,6 @@ class OpenshiftClient(object):
         if checkexitcode:
             if ec != 0:
                 logger.error("cmd failed: %s" % str(cmd))
-                raise Exception(
-                    "cmd: %s failed: \n%s" % (str(cmd), stderr))
+                raise Exception("cmd: %s failed: \n%s" % (str(cmd), stderr))
 
         return ec, stdout, stderr
-

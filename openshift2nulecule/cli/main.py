@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+
 import os
-import sys
 
 import argparse
 import logging
@@ -12,7 +12,8 @@ logger = logging.getLogger()
 logger.handlers = []
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(
+    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -22,12 +23,12 @@ class CLI():
         self.parser = argparse.ArgumentParser()
         self.parser.add_argument("--output",
                                  help="Directory where new Nulecule app"
-                                      " will be created (must not exist)",
+                                 " will be created (must not exist)",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--project",
                                  help="OpenShift project to export as Nulecule"
-                                      " application",
+                                 " application",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--oc",
@@ -66,18 +67,20 @@ class CLI():
         os.makedirs(artifacts_dir)
 
         filepath = os.path.join(artifacts_dir, "artifacts.json")
-        nulecule_artifacts.append("file://{}".format(os.path.relpath(filepath, nulecule_dir)))
+        nulecule_artifacts.append("file://{}".format(os.path.relpath(
+            filepath, nulecule_dir)))
         anymarkup.serialize_file(artifacts, filepath, format="json")
 
         nulecule = {"specversion": "0.0.2",
                     "id": args.project,
                     "metadata": {"name": args.project},
                     "graph": [{"name": args.project,
-                               "artifacts": {"kubernetes": nulecule_artifacts}}]
-                    }
+                               "artifacts":
+                               {"kubernetes": nulecule_artifacts}}]}
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
         logger.info("Nulecule application created in {}".format(nulecule_dir))
+
 
 def main():
     cli = CLI()
