@@ -4,6 +4,7 @@ import logging
 from subprocess import Popen, PIPE
 import anymarkup
 from copy import deepcopy
+import ipaddress
 
 logger = logging.getLogger(__name__)
 
@@ -19,22 +20,73 @@ class OpenshiftClient(object):
         else:
             self.oc = "oc"
 
+    def get_image_info(self, obj):
+        """
+        checks if image specified in ReplicationController is from internal
+        registry
+        TODO: support for Pod
+
+        Args:
+           obj (dict): ReplicationController
+
+        Returns:
+            list: of dicts example:
+                    [{"kind":"ReplicationController",
+                      "name": "foo-bar",
+                      "image":"172.17.42.145:5000/foo/bar",
+                      "private": "True"}]
+        """
+
+        results = []
+
+        for container in obj["spec"]["template"]["spec"]["containers"]:
+            # get registry name from image
+            registry = container["image"].split("/")[0]
+            # get host/ip of registry (remove port)
+            host = registry.split(":")[0]
+
+            info = {"kind": obj["kind"],
+                    "name": obj["metadata"]["name"],
+                    "image": container["image"],
+                    "private": None}
+            try:
+                ip = ipaddress.ip_address(host)
+                info["private"] = ip.is_private
+            except ValueError:
+                # host is not an ip address
+                info["private"] = False
+
+            results.append(info)
+        return results
+
     def export_all(self):
         """
         only kubernetes things for now
         """
-        # resources to export
-        # don't export pods for now
-        # replication controllers should be enough
-        # Ideally this should detect pods that are not created
-        # by replication controller and only export those.
+        # Resources to export.
+        # Don't export Pods for now.
+        # Exporting ReplicationControllers should be enough.
+        # Ideally this should detect Pods that are not created by
+        # ReplicationController and only export those.
         resources = ["replicationcontrollers", "persistentvolumeclaims",
                      "services"]
 
         # output of this export is kind List
         cmd = [self.oc, "export", ",".join(resources), "-o", "json"]
         ec, stdout, stderr = self._run_cmd(cmd)
-        return anymarkup.parse(stdout, format="json", force_types=None)
+        objects = anymarkup.parse(stdout, format="json", force_types=None)
+
+        image_infos = []
+
+        for o in objects["items"]:
+            if o["kind"] == "ReplicationController":
+                image_infos.extend(self.get_image_info(o))
+
+        for ii in image_infos:
+            if ii["private"]:
+                logger.warning("{kind} {name} has image that appears to be"
+                                "from local OpenShift registry!!".format(**ii))
+        return objects
 
     def remove_securityContext(self, kind_list):
         """
@@ -63,9 +115,11 @@ class OpenshiftClient(object):
         Runs a command with its arguments and returns the results. If
         the command gives a bad exit code then a CalledProcessError
         exceptions is raised, just like if check_call() were called.
-        ":Args:
+        
+        Args:
             checkexitcode: Raise exception on bad exit code
             stdin: input string to pass to stdin of the command
+        
         Returns:
             ec:     The exit code from the command
             stdout: stdout from the command
