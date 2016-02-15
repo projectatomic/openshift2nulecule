@@ -1,5 +1,5 @@
 %define name openshift2nulecule
-%define version 0.0.1
+%define version 0.0.2
 %define release 1
 
 Summary: Tool to create Nulecule from OpenShift
@@ -15,6 +15,8 @@ BuildRequires: python2-devel >= 2.4
 BuildRequires: python-pip
 Requires: python-requests
 Requires: python-anymarkup
+Requires: python-ipaddress
+
 
 %description
 Tool for creating Nulecule application from OpenShift project
@@ -41,6 +43,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/openshift2nulecule
 
 %changelog
+* Mon Feb 15 2016 Tomas Kral <tkral@redhat.com> 0.0.2-1
+- stop exporting pods
+- show warning when exporting ReplicatinController with image from internal registry
+
 * Thu Jul 21 2016 Tomas Kral <tkral@redhat.com> 0.0.1-1
 - initial version
 
