@@ -4,9 +4,11 @@ This tool is creating new Nulecule application with Kubernetes
 artifacts from OpenShift project.
 
 
-Right now it only works for projects that are using Docker Images from public
-registeries.
-It is not working for projects that were builded in OpenShift.
+## Limitations
+ - Exports only ReplicationControllers, PersistentVolumeClaims, Services
+ - Works only for projects that are using Docker Images from public
+registeries. If you have images in internal OpenShift Docker registry,
+you have to manually export them to accessible registry.
 
 
 # External dependencies
