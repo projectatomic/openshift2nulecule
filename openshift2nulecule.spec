@@ -43,10 +43,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/openshift2nulecule
 
 %changelog
+* Thu Jul 21 2016 Tomas Kral <tkral@redhat.com> 0.0.1-1
+- initial version
+
 * Mon Feb 15 2016 Tomas Kral <tkral@redhat.com> 0.0.2-1
 - stop exporting pods
 - show warning when exporting ReplicatinController with image from internal registry
-
-* Thu Jul 21 2016 Tomas Kral <tkral@redhat.com> 0.0.1-1
-- initial version
 
