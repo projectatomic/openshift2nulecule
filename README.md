@@ -6,7 +6,7 @@ artifacts from OpenShift project.
 
 ## Limitations
  - Exports only ReplicationControllers, PersistentVolumeClaims, Services.
- - Everything is exported as single artifacts containing everyting.
+ - Everything is exported as single artifacts containing everything.
  - If you have images in internal OpenShift Docker registry,
 you have to manually export them to accessible registry and update artifact.
  - You probably still need go through artifact and change hostnames and ip address.
@@ -19,7 +19,7 @@ connect to OpenShift server.
 You can provide path to `oc` binary using `--oc` argument.
 If you need pass `--config` option to `oc` binary, you can do that using `--oc-config` argument.
 
-# Instalation
+# Installation
 rpm bulids: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
 
 ## CentOS7/RHEL7 (ADB/CDK)
