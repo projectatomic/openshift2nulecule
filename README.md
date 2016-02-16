@@ -6,6 +6,7 @@ artifacts from OpenShift project.
 
 ## Limitations
  - Exports only ReplicationControllers, PersistentVolumeClaims, Services.
+ - Everything is exported as single artifacts containing everyting.
  - If you have images in internal OpenShift Docker registry,
 you have to manually export them to accessible registry and update artifact.
  - You probably still need go through artifact and change hostnames and ip address.
@@ -52,6 +53,7 @@ and create new Nulecule application in `/path/to/new/myapp` directory.
         - pushing images to other registy
     - (b) Expose OpenShift registry [1] and use that
         - exporting registry [1]
+        - detection if registry is exposed (images in ReplicationControllers and Pods are using iternal address)
         - authenticating to registry
  - Create Nulecule file
 
