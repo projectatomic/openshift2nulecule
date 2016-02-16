@@ -27,12 +27,16 @@ class CLI():
                                  type=str,
                                  required=True)
         self.parser.add_argument("--project",
-                                 help="OpenShift project to export as Nulecule"
+                                 help="OpenShift project (namespace) to export as Nulecule"
                                  " application",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--oc",
                                  help="Path to oc binary",
+                                 type=str,
+                                 required=False)
+        self.parser.add_argument("--oc-config",
+                                 help="Path to config file for oc command",
                                  type=str,
                                  required=False)
         self.parser.add_argument("--debug",
@@ -53,7 +57,7 @@ class CLI():
         artifacts_dir = os.path.join(nulecule_dir, "artifacts", "kubernetes")
         nulecule_file = os.path.join(nulecule_dir, "Nulecule")
 
-        oc = OpenshiftClient(oc=args.oc)
+        oc = OpenshiftClient(oc=args.oc, namespace=args.project, oc_config=args.oc_config)
         artifacts = oc.export_all()
 
         # remove  ugly thing to do :-(

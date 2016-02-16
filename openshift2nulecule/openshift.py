@@ -13,12 +13,17 @@ class OpenshiftClient(object):
 
     # path to oc binary
     oc = None
+    namespace = None
+    oc_config = None
 
-    def __init__(self, oc=None):
+    def __init__(self, oc=None, namespace=None, oc_config=None):
         if oc:
             self.oc = oc
         else:
             self.oc = "oc"
+
+        self.namespace = namespace
+        self.oc_config = oc_config
 
     def get_image_info(self, obj):
         """
@@ -59,6 +64,31 @@ class OpenshiftClient(object):
             results.append(info)
         return results
 
+    def _call_oc(self, args):
+        """
+        Runs a oc command with its arguments and returns the results.
+
+        Args:
+            args (list): arguments for oc command
+
+        Returns:
+            ec:     The exit code from the command
+            stdout: stdout from the command
+            stderr: stderr from the command
+        """
+
+        cmd = [self.oc]
+        if self.oc_config:
+            cmd.extend(["--config", self.oc_config])
+        if self.namespace:
+            cmd.extend(["--namespace", self.namespace])
+
+        cmd.extend(args)
+
+        ec, stdout, stderr = self._run_cmd(cmd)
+
+        return (ec, stdout, stderr)
+
     def export_all(self):
         """
         only kubernetes things for now
@@ -72,8 +102,8 @@ class OpenshiftClient(object):
                      "services"]
 
         # output of this export is kind List
-        cmd = [self.oc, "export", ",".join(resources), "-o", "json"]
-        ec, stdout, stderr = self._run_cmd(cmd)
+        args = ["export", ",".join(resources), "-o", "json"]
+        ec, stdout, stderr = self._call_oc(args)
         objects = anymarkup.parse(stdout, format="json", force_types=None)
 
         image_infos = []
@@ -85,7 +115,7 @@ class OpenshiftClient(object):
         for ii in image_infos:
             if ii["private"]:
                 logger.warning("{kind} {name} has image that appears to be"
-                                "from local OpenShift registry!!".format(**ii))
+                               "from local OpenShift registry!!".format(**ii))
         return objects
 
     def remove_securityContext(self, kind_list):
@@ -115,11 +145,11 @@ class OpenshiftClient(object):
         Runs a command with its arguments and returns the results. If
         the command gives a bad exit code then a CalledProcessError
         exceptions is raised, just like if check_call() were called.
-        
+
         Args:
             checkexitcode: Raise exception on bad exit code
             stdin: input string to pass to stdin of the command
-        
+
         Returns:
             ec:     The exit code from the command
             stdout: stdout from the command
