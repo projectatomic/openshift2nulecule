@@ -5,16 +5,37 @@ artifacts from OpenShift project.
 
 
 ## Limitations
- - Exports only ReplicationControllers, PersistentVolumeClaims, Services
- - Works only for projects that are using Docker Images from public
-registeries. If you have images in internal OpenShift Docker registry,
-you have to manually export them to accessible registry.
+ - Exports only ReplicationControllers, PersistentVolumeClaims, Services.
+ - If you have images in internal OpenShift Docker registry,
+you have to manually export them to accessible registry and update artifact.
+ - You probably still need go through artifact and change hostnames and ip address.
+
 
 # External dependencies
 OpenShift client (`oc`) has to be installed and configured to 
 connect to OpenShift server.
 
-# Example
+You can provide path to `oc` binary using `--oc` argument.
+If you need pass `--config` option to `oc` binary, you can do that using `--oc-config` argument.
+
+# Instalation
+rpm bulids: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
+
+## CentOS7/RHEL7 (ADB/CDK)
+
+```sh
+# enable epel
+yum install epel-release
+
+# add tkral/openshift2nulecle copr repository
+curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-7/tkral-openshift2nulecle-epel-7.repo > /etc/yum.repos.d/tkral-openshift2nulecle-epel-7.repo
+
+# install openshift2nulecule
+yum install openshift2nulecule
+```
+
+
+# Usage example
 ```
 openshift2nulecule --output=/path/to/new/myapp --project=myproject
 ```
