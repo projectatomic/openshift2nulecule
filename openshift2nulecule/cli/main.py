@@ -7,13 +7,16 @@ import logging
 import anymarkup
 
 from openshift2nulecule.openshift import OpenshiftClient
+from openshift2nulecule import utils
 
 logger = logging.getLogger()
 logger.handlers = []
 logger.setLevel(logging.INFO)
 ch = logging.StreamHandler()
-formatter = logging.Formatter(
-    '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+logfile_formatter = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+stdout_formatter = '%(levelname)s - %(message)s'
+formatter = logging.Formatter(stdout_formatter)
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
@@ -27,8 +30,8 @@ class CLI():
                                  type=str,
                                  required=True)
         self.parser.add_argument("--project",
-                                 help="OpenShift project (namespace) to export as Nulecule"
-                                 " application",
+                                 help="OpenShift project (namespace) to export"
+                                      " as Nulecule application",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--oc",
@@ -49,15 +52,24 @@ class CLI():
         if args.debug:
             logger.setLevel(logging.DEBUG)
 
-        nulecule_dir = os.path.abspath(args.output)
+        if utils.in_container() and not os.path.isabs(args.output):
+            msg = "If running inside container --output path has to be absolute"
+            logger.critical(msg)
+            raise Exception(msg)
+
+        nulecule_dir = utils.get_path(os.path.abspath(args.output))
 
         if os.path.exists(nulecule_dir):
-            raise Exception("{} must not exist".format(nulecule_dir))
+            msg = "{} must not exist".format(nulecule_dir)
+            logger.critical(msg)
+            raise Exception(msg)
 
         artifacts_dir = os.path.join(nulecule_dir, "artifacts", "kubernetes")
         nulecule_file = os.path.join(nulecule_dir, "Nulecule")
 
-        oc = OpenshiftClient(oc=args.oc, namespace=args.project, oc_config=args.oc_config)
+        oc = OpenshiftClient(oc=args.oc,
+                             namespace=args.project,
+                             oc_config=args.oc_config)
         artifacts = oc.export_all()
 
         # remove  ugly thing to do :-(
@@ -83,7 +95,8 @@ class CLI():
                                {"kubernetes": nulecule_artifacts}}]}
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
-        logger.info("Nulecule application created in {}".format(nulecule_dir))
+        logger.info("Nulecule application created in {}".format(
+            utils.remove_path(nulecule_dir)))
 
 
 def main():

@@ -5,6 +5,9 @@ from subprocess import Popen, PIPE
 import anymarkup
 from copy import deepcopy
 import ipaddress
+import os
+
+from openshift2nulecule import utils
 
 logger = logging.getLogger(__name__)
 
@@ -20,10 +23,36 @@ class OpenshiftClient(object):
         if oc:
             self.oc = oc
         else:
-            self.oc = "oc"
+            self.oc = self._find_oc()
 
         self.namespace = namespace
-        self.oc_config = oc_config
+
+        if oc_config:
+            self.oc_config = utils.get_path(oc_config)
+        else:
+            oc_config = None
+
+    def _find_oc(self):
+        """
+        Determine the path to oc command
+        Search /usr/bin:/usr/local/bin
+
+        Returns:
+            str: path to oc binary
+        """
+
+        test_paths = ['/usr/bin/oc', '/usr/local/bin/oc']
+
+        for path in test_paths:
+            test_path = utils.get_path(path)
+            logger.debug("trying oc at " + test_path)
+            oc = test_path
+            if os.access(oc, os.X_OK):
+                logger.debug("found oc at " + test_path)
+                return oc
+        logger.fatal("No oc found in {}. Please provide corrent path to co "
+                     "binary using --oc argument".format(":".join(test_paths)))
+        return None
 
     def get_image_info(self, obj):
         """
@@ -114,7 +143,7 @@ class OpenshiftClient(object):
 
         for ii in image_infos:
             if ii["private"]:
-                logger.warning("{kind} {name} has image that appears to be"
+                logger.warning("{kind} {name} has image that appears to be "
                                "from local OpenShift registry!!".format(**ii))
         return objects
 

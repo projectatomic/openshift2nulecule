@@ -20,7 +20,10 @@ You can provide path to `oc` binary using `--oc` argument.
 If you need pass `--config` option to `oc` binary, you can do that using `--oc-config` argument.
 
 # Installation
-rpm bulids: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
+RPMs: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
+
+You can also run `openshift2nulecule` as Docker container. See "Usege example" for more.
+
 
 ## CentOS7/RHEL7 (ADB/CDK)
 
@@ -37,11 +40,36 @@ yum install openshift2nulecule
 
 
 # Usage example
-```
+
+```sh
 openshift2nulecule --output=/path/to/new/myapp --project=myproject
 ```
 This will export whole project `myproject` from OpenShift 
 and create new Nulecule application in `/path/to/new/myapp` directory.
+
+## Running as Docker container
+Easies way how to run openshift2nulecule as Docker container is to use [Atomic](https://github.com/projectatomic/atomic) tool.
+
+```sh
+atomic run tomaskral/openshit2nulecule \
+  --project testing \
+  --output $HOME/mytest \
+  --oc-config=$HOME/.kube/config
+```
+When you are running openshift2nulecule from container, you have to always specify path to `oc` configuration file (`--oc-config`)
+in most cases setting it to default `$HOME/.kube/config` should be enough.
+
+Example of running openshift2nulecule container without Atomic tool:
+```sh
+docker run -it --rm --privileged --net=host -v /:/host tomaskral/openshit2nulecule \
+  --project testing \
+  --output $HOME/mytest \
+  --oc-config=$HOME/.kube/config
+
+```
+
+
+
 
 # Notes
 
