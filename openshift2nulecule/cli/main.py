@@ -45,6 +45,20 @@ class CLI():
         self.parser.add_argument("--debug",
                                  help="Show debug messages",
                                  action='store_true')
+        self.parser.add_argument("--oc-registry-host",
+                                 help="OpenShift internal registry hostname",
+                                 required=False)
+        self.parser.add_argument("--oc-registry-login",
+                                 help="Login information for OpenShift "
+                                      "internal registry (username:passoword)",
+                                 required=False)
+        self.parser.add_argument("--registry-host",
+                                 help="External registry hostname",
+                                 required=False)
+        self.parser.add_argument("--registry-login",
+                                 help="Login information for registry "
+                                      "(username:passoword)",
+                                 required=False)
 
     def run(self):
         args = self.parser.parse_args()
