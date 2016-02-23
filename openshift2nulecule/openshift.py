@@ -3,9 +3,9 @@
 import logging
 from subprocess import Popen, PIPE
 import anymarkup
-from copy import deepcopy
 import ipaddress
 import os
+import docker
 
 from openshift2nulecule import utils
 
@@ -54,45 +54,6 @@ class OpenshiftClient(object):
                      "binary using --oc argument".format(":".join(test_paths)))
         return None
 
-    def get_image_info(self, obj):
-        """
-        checks if image specified in ReplicationController is from internal
-        registry
-        TODO: support for Pod
-
-        Args:
-           obj (dict): ReplicationController
-
-        Returns:
-            list: of dicts example:
-                    [{"kind":"ReplicationController",
-                      "name": "foo-bar",
-                      "image":"172.17.42.145:5000/foo/bar",
-                      "private": "True"}]
-        """
-
-        results = []
-
-        for container in obj["spec"]["template"]["spec"]["containers"]:
-            # get registry name from image
-            registry = container["image"].split("/")[0]
-            # get host/ip of registry (remove port)
-            host = registry.split(":")[0]
-
-            info = {"kind": obj["kind"],
-                    "name": obj["metadata"]["name"],
-                    "image": container["image"],
-                    "private": None}
-            try:
-                ip = ipaddress.ip_address(host)
-                info["private"] = ip.is_private
-            except ValueError:
-                # host is not an ip address
-                info["private"] = False
-
-            results.append(info)
-        return results
-
     def _call_oc(self, args):
         """
         Runs a oc command with its arguments and returns the results.
@@ -118,7 +79,7 @@ class OpenshiftClient(object):
 
         return (ec, stdout, stderr)
 
-    def export_all(self):
+    def export_project(self):
         """
         only kubernetes things for now
         """
@@ -135,39 +96,8 @@ class OpenshiftClient(object):
         ec, stdout, stderr = self._call_oc(args)
         objects = anymarkup.parse(stdout, format="json", force_types=None)
 
-        image_infos = []
-
-        for o in objects["items"]:
-            if o["kind"] == "ReplicationController":
-                image_infos.extend(self.get_image_info(o))
-
-        for ii in image_infos:
-            if ii["private"]:
-                logger.warning("{kind} {name} has image that appears to be "
-                               "from local OpenShift registry!!".format(**ii))
-        return objects
-
-    def remove_securityContext(self, kind_list):
-        """
-        Remove securityContext from all objects in kind_list.
-
-        Args:
-            kind_list (dict): serialized List of openshift objects
-
-        Returns:
-            dict: serialized List of object striped from securityContext
-        """
-
-        objs = deepcopy(kind_list)
-        for obj in objs['items']:
-            #   remove securityContext from pods
-            if obj['kind'].lower() == 'pod':
-                if "securityContext" in obj['spec'].keys():
-                    del obj['spec']["securityContext"]
-                for c in obj['spec']["containers"]:
-                    if "securityContext" in c.keys():
-                        del c["securityContext"]
-        return objs
+        ep = ExportedProject(artifacts=objects)
+        return ep
 
     def _run_cmd(self, cmd, checkexitcode=True, stdin=None):
         """
@@ -199,3 +129,100 @@ class OpenshiftClient(object):
                 raise Exception("cmd: %s failed: \n%s" % (str(cmd), stderr))
 
         return ec, stdout, stderr
+
+
+class ExportedProject(object):
+    artifacts = None
+
+    def __init__(self, artifacts):
+        self.artifacts = artifacts
+
+        # remove  ugly thing to do :-(
+        # I don't know hot to get securityContext and Selinux
+        # to work on k8s for now :-(
+        self._remove_securityContext()
+
+    def _remove_securityContext(self):
+        """
+        Remove securityContext from all objects in kind_list.
+        """
+
+        for obj in self.artifacts['items']:
+            #   remove securityContext from pods
+            if obj['kind'].lower() == 'pod':
+                if "securityContext" in obj['spec'].keys():
+                    del obj['spec']["securityContext"]
+                for c in obj['spec']["containers"]:
+                    if "securityContext" in c.keys():
+                        del c["securityContext"]
+
+    def pull_images(self, images, registry, login):
+        logger.debug("Pulling images to local registry images: {}, "
+                     " registry:{}, login:{}".format(images, registry, login))
+        
+        # get all images of all ReplicationControllers
+        images = []
+        for artifact in self.artifacts["items"]:
+            if artifact["kind"] == "ReplicationController":
+                images.extend(self._get_image_info(artifact, registry))
+
+        docker_client = docker.Client(base_url='unix://var/run/docker.sock')
+        login_response = docker_client.login(username=login.split(":")[0],
+                                             password=login.split(":")[1],
+                                             registry=registry)
+        logger.info(login_response)
+        for imageinfo in images:
+            if imageinfo["private"]:
+                image = imageinfo["exposed_image"]
+            else:
+                image = imageinfo["image"]
+            logger.info("Pulling image {}".format(image))
+            for line in docker_client.pull(image, stream=True):
+                # skip lines with progress bar
+                if "progress" not in line:
+                    logger.info(line)
+
+
+    def _get_image_info(self, obj, exposed_registry):
+        """
+        Checks if image specified in ReplicationController is from internal
+        registry. If it is from private registry....
+        of registry
+        TODO: support for Pod
+
+        Args:
+           obj (dict): ReplicationController
+           exposed_registry (str): host for exposed OpenShift registry.
+
+        Returns:
+            list: of dicts example:
+                    [{"kind":"ReplicationController",
+                      "name": "foo-bar",
+                      "image":"172.17.42.145:5000/foo/bar",
+                      "private": "True",
+                      "exposed_registry": "example.com/foo/bar}]
+        """
+
+        results = []
+
+        for container in obj["spec"]["template"]["spec"]["containers"]:
+            # get registry name from image
+            registry = container["image"].split("/")[0]
+            # get host/ip of registry (remove port)
+            host = registry.split(":")[0]
+
+            info = {"kind": obj["kind"],
+                    "name": obj["metadata"]["name"],
+                    "image": container["image"],
+                    "private": None}
+            try:
+                ip = ipaddress.ip_address(host)
+                info["private"] = ip.is_private
+                info["exposed_image"] = info["image"].replace(registry, exposed_registry)
+            except ValueError:
+                # host is not an ip address
+                info["private"] = False
+
+            results.append(info)
+        return results
+

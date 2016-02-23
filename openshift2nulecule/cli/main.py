@@ -45,6 +45,7 @@ class CLI():
         self.parser.add_argument("--debug",
                                  help="Show debug messages",
                                  action='store_true')
+
         self.parser.add_argument("--oc-registry-host",
                                  help="OpenShift internal registry hostname",
                                  required=False)
@@ -52,6 +53,15 @@ class CLI():
                                  help="Login information for OpenShift "
                                       "internal registry (username:passoword)",
                                  required=False)
+
+        self.parser.add_argument("--migrate-images",
+                                 help="Pull images from OpenShift registry to "
+                                      "local Docker instance and push them to "
+                                      "remote registry (--registry-host) ",
+                                 choices=["none", "internal", "all"],
+                                 default="none",
+                                 required=False)
+
         self.parser.add_argument("--registry-host",
                                  help="External registry hostname",
                                  required=False)
@@ -84,12 +94,15 @@ class CLI():
         oc = OpenshiftClient(oc=args.oc,
                              namespace=args.project,
                              oc_config=args.oc_config)
-        artifacts = oc.export_all()
 
-        # remove  ugly thing to do :-(
-        # I don't know hot to get securityContext and Selinux
-        # to work on k8s for now :-(
-        artifacts = oc.remove_securityContext(artifacts)
+        exported_project = oc.export_project()
+
+        if args.migrate_images != "none":
+            exported_project.pull_images(args.migrate_images,
+                                         args.oc_registry_host,
+                                         args.oc_registry_login)
+
+        artifacts = exported_project.artifacts
 
         # list of artifact for Nulecule file
         nulecule_artifacts = []
