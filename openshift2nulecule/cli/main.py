@@ -54,7 +54,7 @@ class CLI():
                                       "internal registry (username:passoword)",
                                  required=False)
 
-        self.parser.add_argument("--migrate-images",
+        self.parser.add_argument("--export-images",
                                  help="Pull images from OpenShift registry to "
                                       "local Docker instance and push them to "
                                       "remote registry (--registry-host) ",
@@ -75,6 +75,7 @@ class CLI():
 
         if args.debug:
             logger.setLevel(logging.DEBUG)
+        logger.debug("Running with arguments {}".format(args))
 
         if utils.in_container() and not os.path.isabs(args.output):
             msg = "If running inside container --output path has to be absolute"
@@ -94,13 +95,27 @@ class CLI():
         oc = OpenshiftClient(oc=args.oc,
                              namespace=args.project,
                              oc_config=args.oc_config)
-
+        
+        # export project info from openshift
         exported_project = oc.export_project()
 
-        if args.migrate_images != "none":
-            exported_project.pull_images(args.migrate_images,
-                                         args.oc_registry_host,
-                                         args.oc_registry_login)
+        # export images
+        if args.export_images != "none":
+            if args.export_images == "internal":
+                only_internal = True
+            elif args.export_images == "all":
+                only_internal = False
+
+            # TODO: add check if export_images oc-registry-host has to be set
+            exported_project.pull_images(args.oc_registry_host,
+                                         args.oc_registry_login,
+                                         only_internal)
+            if args.registry_host:
+                exported_project.push_images(args.registry_host,
+                                             args.registry_login,
+                                             only_internal)
+
+
 
         artifacts = exported_project.artifacts
 

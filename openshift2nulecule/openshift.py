@@ -3,7 +3,6 @@
 import logging
 from subprocess import Popen, PIPE
 import anymarkup
-import ipaddress
 import os
 import docker
 
@@ -29,10 +28,9 @@ class OpenshiftClient(object):
 
         if oc_config:
             self.oc_config = utils.get_path(oc_config)
-        else:
-            oc_config = None
 
-    def _find_oc(self):
+    @staticmethod
+    def _find_oc():
         """
         Determine the path to oc command
         Search /usr/bin:/usr/local/bin
@@ -134,6 +132,10 @@ class OpenshiftClient(object):
 class ExportedProject(object):
     artifacts = None
 
+    # all images from all artifacts, gets updated with every image operation
+    # like pull_images, push_images ...
+    images = None
+
     def __init__(self, artifacts):
         self.artifacts = artifacts
 
@@ -141,6 +143,12 @@ class ExportedProject(object):
         # I don't know hot to get securityContext and Selinux
         # to work on k8s for now :-(
         self._remove_securityContext()
+
+        # get all images of all ReplicationControllers
+        self.images = []
+        for artifact in self.artifacts["items"]:
+            if artifact["kind"] == "ReplicationController":
+                self.images.extend(utils.get_image_info(artifact))
 
     def _remove_securityContext(self):
         """
@@ -156,73 +164,95 @@ class ExportedProject(object):
                     if "securityContext" in c.keys():
                         del c["securityContext"]
 
-    def pull_images(self, images, registry, login):
-        logger.debug("Pulling images to local registry images: {}, "
-                     " registry:{}, login:{}".format(images, registry, login))
-        
-        # get all images of all ReplicationControllers
-        images = []
-        for artifact in self.artifacts["items"]:
-            if artifact["kind"] == "ReplicationController":
-                images.extend(self._get_image_info(artifact, registry))
+    def pull_images(self, registry, login, only_internal=True):
+        """
+        This pulls all images that are mentioned in artifact.
+
+        Args:
+            registry (str): url of exposed OpenShift Docker registry
+            login (str): username:password for OpenShift Docker registry
+            only_internal (bool): if True only images that are in internal
+                                  OpenShift Docker registry, otherwise pulls
+                                  all images (default is True)
+
+        """
+        logger.debug("Pulling images to local registry only_internal: {}, "
+                     " registry:{}, login:{}".format(only_internal, registry, login))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
         login_response = docker_client.login(username=login.split(":")[0],
                                              password=login.split(":")[1],
                                              registry=registry)
         logger.info(login_response)
-        for imageinfo in images:
-            if imageinfo["private"]:
-                image = imageinfo["exposed_image"]
+        for image_info in self.images:
+            if image_info["internal"]:
+                image_info["image"] = utils.replace_registry_host(
+                    image_info["image"], registry)
             else:
-                image = imageinfo["image"]
+                if only_internal:
+                    # we are exporting only internal images, skip this
+                    continue
+            image = image_info["image"]
             logger.info("Pulling image {}".format(image))
             for line in docker_client.pull(image, stream=True):
                 # skip lines with progress bar
                 if "progress" not in line:
                     logger.info(line)
 
-
-    def _get_image_info(self, obj, exposed_registry):
+    def push_images(self, registry, login, only_internal=True):
         """
-        Checks if image specified in ReplicationController is from internal
-        registry. If it is from private registry....
-        of registry
-        TODO: support for Pod
+        This pushes all images that are mentioned in artifact.
 
         Args:
-           obj (dict): ReplicationController
-           exposed_registry (str): host for exposed OpenShift registry.
+            registry (str): url of registry
+            login (str): username:password for docker registry
+            only_internal (bool): if True only images that are in internal
+                                  OpenShift Docker registry, otherwise pulls
+                                  all images (default is True)
 
-        Returns:
-            list: of dicts example:
-                    [{"kind":"ReplicationController",
-                      "name": "foo-bar",
-                      "image":"172.17.42.145:5000/foo/bar",
-                      "private": "True",
-                      "exposed_registry": "example.com/foo/bar}]
         """
+        logger.debug("pushing images to registry only_internal: {}, "
+                     " registry:{}, login:{}".format(only_internal, registry, login))
 
-        results = []
+        docker_client = docker.Client(base_url='unix://var/run/docker.sock')
+        if login:
+            login_response = docker_client.login(username=login.split(":")[0],
+                                                 password=login.split(":")[1],
+                                                 registry=registry)
+            logger.debug(login_response)
+        for image_info in self.images:
+            if only_internal and not image_info["internal"]:
+                # skip this image
+                continue
+            image = image_info["image"]
 
-        for container in obj["spec"]["template"]["spec"]["containers"]:
-            # get registry name from image
-            registry = container["image"].split("/")[0]
-            # get host/ip of registry (remove port)
-            host = registry.split(":")[0]
+            # new name of image (only replace registry part)
+            name_new_registry = utils.replace_registry_host(image, registry)
 
-            info = {"kind": obj["kind"],
-                    "name": obj["metadata"]["name"],
-                    "image": container["image"],
-                    "private": None}
-            try:
-                ip = ipaddress.ip_address(host)
-                info["private"] = ip.is_private
-                info["exposed_image"] = info["image"].replace(registry, exposed_registry)
-            except ValueError:
-                # host is not an ip address
-                info["private"] = False
+            (new_name, new_name_tag, new_name_digest) = utils.parse_image_name(
+                name_new_registry)
 
-            results.append(info)
-        return results
+            if new_name_digest:
+                # if this is image with define digest, use digest as tag
+                # docker cannot push image without tag, and if images
+                # is pulled with digest it doesn't have tag specified
+
+                # if this is going to be used as tag, it cannot contain ':'
+                tag = new_name_digest.replace(":", "")
+            else:
+                tag = new_name_tag
+
+            new_full_name = "{}:{}".format(new_name, tag)
+
+            logger.info("tagging image {} as {}".format(image, new_full_name))
+            tag_response = docker_client.tag(image, new_name, tag, force=True)
+            logger.debug(tag_response)
+
+            logger.info("pushing image {}".format(new_full_name))
+            # TODO: push fails with image with digest
+            for line in docker_client.push(new_full_name, stream=True):
+                # skip lines with progress bar
+                if "progress" not in line:
+                    logger.info(line)
+
 
