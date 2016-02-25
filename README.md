@@ -40,6 +40,7 @@ yum install openshift2nulecule
 
 
 # Usage example
+Before running this you have to be authenticated to OpenShift with `oc` command.
 
 ```sh
 openshift2nulecule --output=/path/to/new/myapp --project=myproject
