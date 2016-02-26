@@ -46,6 +46,11 @@ def get_path(path):
         str: path with prefixed /host if inside container
     """
     if in_container():
-        return HOST_DIR + path
+        return HOST_DIR + os.path.abspath(path)
     else:
-        return path
+        expanded_path = os.path.expanduser(path)
+        if os.path.isabs(expanded_path):
+            return expanded_path
+        else:
+            return os.path.abspath(expanded_path)
+
