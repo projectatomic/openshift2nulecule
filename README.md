@@ -27,9 +27,28 @@ You can also run `openshift2nulecule` as Docker container. See "Usege example" f
 
 ## CentOS7/RHEL7 (ADB/CDK)
 
+### CentOS7 (ADB)
 ```sh
 # enable epel
 yum install epel-release
+
+# add tkral/openshift2nulecle copr repository
+curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-7/tkral-openshift2nulecle-epel-7.repo > /etc/yum.repos.d/tkral-openshift2nulecle-epel-7.repo
+
+# install openshift2nulecule
+yum install openshift2nulecule
+```
+
+### RHEL7 (CDK)
+```
+# enable optional repositories
+subscription-manager repos --enable rhel-7-server-optional-rpms 
+
+# enable extras repositories
+subscription-manager repos --enable rhel-7-server-extras-rpms
+
+# add EPEL repositories
+https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
 # add tkral/openshift2nulecle copr repository
 curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-7/tkral-openshift2nulecle-epel-7.repo > /etc/yum.repos.d/tkral-openshift2nulecle-epel-7.repo
