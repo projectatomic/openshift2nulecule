@@ -95,6 +95,7 @@ class CLI():
                                {"kubernetes": nulecule_artifacts}}]}
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
+        utils.generate_dockerfile(nulecule_dir)
         logger.info("Nulecule application created in {}".format(
             utils.remove_path(nulecule_dir)))
 

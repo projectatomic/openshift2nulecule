@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 import os
-from openshift2nulecule.constants import HOST_DIR
+from openshift2nulecule.constants import (HOST_DIR, 
+                                          NULECULE_SPECVERSION,
+                                          NULECULE_PROVIDERS,
+                                          ATOMICAPP_VERSION)
 
 
 def in_container():
@@ -54,3 +57,23 @@ def get_path(path):
         else:
             return os.path.abspath(expanded_path)
 
+
+def generate_dockerfile(nulecule_dir):
+
+    files = [file for file in os.listdir(nulecule_dir)
+             if os.path.isfile(os.path.join(nulecule_dir, file))]
+    files.append('Dockerfile')
+    dockerfile = open(os.path.join(nulecule_dir, 'Dockerfile'), 'w')
+
+    dockerfile.writelines([
+        'FROM projectatomic/atomicapp:{}\n'.format(ATOMICAPP_VERSION),
+        '\n',
+        'LABEL io.projectatomic.nulecule.providers="{}" \\\n'.format(
+            ','.join(NULECULE_PROVIDERS)),
+        '      io.projectatomic.nulecule.specversion="{}"\n'.format(
+            NULECULE_SPECVERSION),
+        '\n',
+        'ADD {} /application-entity/\n'.format(" ".join(files)),
+        'ADD /artifacts /application-entity/artifacts'
+    ])
+    dockerfile.close()
