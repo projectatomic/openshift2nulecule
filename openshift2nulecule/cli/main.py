@@ -57,7 +57,7 @@ class CLI():
             logger.critical(msg)
             raise Exception(msg)
 
-        nulecule_dir = utils.get_path(os.path.abspath(args.output))
+        nulecule_dir = utils.get_path(args.output)
 
         if os.path.exists(nulecule_dir):
             msg = "{} must not exist".format(nulecule_dir)
