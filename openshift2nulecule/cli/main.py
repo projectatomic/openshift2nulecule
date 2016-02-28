@@ -78,7 +78,7 @@ class CLI():
         logger.debug("Running with arguments {}".format(args))
 
         if utils.in_container() and not os.path.isabs(args.output):
-            msg = "If running inside container --output path has to be absolute"
+            msg = "If running inside container --output path has to be absolute path"
             logger.critical(msg)
             raise Exception(msg)
 
@@ -95,7 +95,7 @@ class CLI():
         oc = OpenshiftClient(oc=args.oc,
                              namespace=args.project,
                              oc_config=args.oc_config)
-        
+
         # export project info from openshift
         exported_project = oc.export_project()
 
@@ -110,12 +110,14 @@ class CLI():
             exported_project.pull_images(args.oc_registry_host,
                                          args.oc_registry_login,
                                          only_internal)
+
+            # if registy-host is not set we only pull images
             if args.registry_host:
                 exported_project.push_images(args.registry_host,
                                              args.registry_login,
                                              only_internal)
 
-
+            exported_project.update_artifacts_images()
 
         artifacts = exported_project.artifacts
 

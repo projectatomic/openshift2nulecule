@@ -133,10 +133,13 @@ def get_image_info(obj):
 
     Returns:
         list of dicts example:
-                [{"kind":"ReplicationController",
-                  "name": "foo-bar",
-                  "image":"172.17.42.145:5000/foo/bar",
+                [{"image":"172.17.42.145:5000/foo/bar",
+                  "original_image":"172.17.42.145:5000/foo/bar",
                   "internal": "True"}]
+
+                `original_image` shouldn't be ever modified,
+                `image` can be modified when pulling and pushing
+                images between registries
     """
 
     results = []
@@ -147,9 +150,8 @@ def get_image_info(obj):
         # get host/ip of registry (remove port)
         host = registry.split(":")[0]
 
-        info = {"kind": obj["kind"],
-                "name": obj["metadata"]["name"],
-                "image": container["image"],
+        info = {"image": container["image"],
+                "original_image": container["image"],
                 "internal": None}
         try:
             ip = ipaddress.ip_address(host)

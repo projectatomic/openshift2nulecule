@@ -137,6 +137,7 @@ class ExportedProject(object):
     images = None
 
     def __init__(self, artifacts):
+
         self.artifacts = artifacts
 
         # remove  ugly thing to do :-(
@@ -147,6 +148,7 @@ class ExportedProject(object):
         # get all images of all ReplicationControllers
         self.images = []
         for artifact in self.artifacts["items"]:
+            # TODO: add support for other kinds (Pod, DeploymentConfig)
             if artifact["kind"] == "ReplicationController":
                 self.images.extend(utils.get_image_info(artifact))
 
@@ -156,7 +158,7 @@ class ExportedProject(object):
         """
 
         for obj in self.artifacts['items']:
-            #   remove securityContext from pods
+            #  remove securityContext from pods
             if obj['kind'].lower() == 'pod':
                 if "securityContext" in obj['spec'].keys():
                     del obj['spec']["securityContext"]
@@ -177,7 +179,8 @@ class ExportedProject(object):
 
         """
         logger.debug("Pulling images to local registry only_internal: {}, "
-                     " registry:{}, login:{}".format(only_internal, registry, login))
+                     " registry:{}, login:{}".format(only_internal, registry,
+                                                     login))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
         login_response = docker_client.login(username=login.split(":")[0],
@@ -198,6 +201,7 @@ class ExportedProject(object):
                 # skip lines with progress bar
                 if "progress" not in line:
                     logger.info(line)
+                    # TODO: verify pull success
 
     def push_images(self, registry, login, only_internal=True):
         """
@@ -212,7 +216,8 @@ class ExportedProject(object):
 
         """
         logger.debug("pushing images to registry only_internal: {}, "
-                     " registry:{}, login:{}".format(only_internal, registry, login))
+                     " registry:{}, login:{}".format(only_internal, registry,
+                                                     login))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
         if login:
@@ -220,6 +225,7 @@ class ExportedProject(object):
                                                  password=login.split(":")[1],
                                                  registry=registry)
             logger.debug(login_response)
+            # TODO: check login_response
         for image_info in self.images:
             if only_internal and not image_info["internal"]:
                 # skip this image
@@ -243,9 +249,11 @@ class ExportedProject(object):
                 tag = new_name_tag
 
             new_full_name = "{}:{}".format(new_name, tag)
+            image_info["image"] = new_full_name
 
             logger.info("tagging image {} as {}".format(image, new_full_name))
             tag_response = docker_client.tag(image, new_name, tag, force=True)
+            # TODO: verify tag_response
             logger.debug(tag_response)
 
             logger.info("pushing image {}".format(new_full_name))
@@ -254,5 +262,24 @@ class ExportedProject(object):
                 # skip lines with progress bar
                 if "progress" not in line:
                     logger.info(line)
+                    # TODO: verify if push was success
 
+    def update_artifacts_images(self):
+        """
+        Update artifact images. When pulling and pushing images
+        are renamed (retagged). This updates image names in
+        all artifacts.
+        """
 
+        for artifact in self.artifacts["items"]:
+            # TODO: add support for other kinds (Pod, DeploymentConfig)
+            if artifact["kind"] == "ReplicationController":
+                for container in \
+                        artifact["spec"]["template"]["spec"]["containers"]:
+                    for image in self.images:
+                        if container["image"] == image["original_image"]:
+                            logger.info("Updating image {} for artifact {}:{}"
+                                        .format(container["image"],
+                                                artifact["kind"],
+                                                artifact["metadata"]["name"]))
+                            container["image"] = image["image"]
