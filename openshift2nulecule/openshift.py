@@ -5,6 +5,7 @@ from subprocess import Popen, PIPE
 import anymarkup
 import os
 import docker
+from docker.errors import APIError
 
 from openshift2nulecule import utils
 
@@ -18,7 +19,6 @@ class OpenshiftClient(object):
 
     namespace = None
     oc_config = None
-
 
     def __init__(self, oc=None, namespace=None, oc_config=None):
         if oc:
@@ -206,10 +206,16 @@ class ExportedProject(object):
                                             username, password))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
-        login_response = docker_client.login(username=username,
-                                             password=password,
-                                             registry=registry)
-        logger.info(login_response)
+
+        try:
+            login_response = docker_client.login(username=username,
+                                                 password=password,
+                                                 registry=registry)
+            logger.debug(login_response)
+        except docker.errors.APIError as e:
+            logger.critical(e)
+            raise Exception(e)
+
         for image_info in self.images:
             if image_info["internal"]:
                 image_info["image"] = utils.replace_registry_host(
@@ -221,10 +227,17 @@ class ExportedProject(object):
             image = image_info["image"]
             logger.info("Pulling image {}".format(image))
             for line in docker_client.pull(image, stream=True):
-                # skip lines with progress bar
-                if "progress" not in line:
-                    logger.info(line)
-                    # TODO: verify pull success
+                line_info = anymarkup.parse(line)
+                if "progress" in line_info:
+                    # don't print progress information
+                    # showing status is enough for now
+                    continue
+                elif "status" in line_info:
+                    logger.info(line_info["status"])
+                elif "errorDetail" in line_info:
+                    msg = line_info["errorDetail"]["message"]
+                    logger.critical(msg)
+                    raise Exception(msg)
 
     def push_images(self, registry, username, password, only_internal=True):
         """
@@ -245,12 +258,17 @@ class ExportedProject(object):
                                                        username, password))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
+
         if username and password:
-            login_response = docker_client.login(username=username,
-                                                 password=password,
-                                                 registry=registry)
-            logger.debug(login_response)
-            # TODO: check login_response
+            try:
+                login_response = docker_client.login(username=username,
+                                                     password=password,
+                                                     registry=registry)
+                logger.debug(login_response)
+            except docker.errors.APIError as e:
+                logger.critical(e)
+                raise Exception(e)
+
         for image_info in self.images:
             if only_internal and not image_info["internal"]:
                 # skip this image
@@ -276,18 +294,32 @@ class ExportedProject(object):
             new_full_name = "{}:{}".format(new_name, tag)
             image_info["image"] = new_full_name
 
-            logger.info("tagging image {} as {}".format(image, new_full_name))
-            tag_response = docker_client.tag(image, new_name, tag, force=True)
-            # TODO: verify tag_response
-            logger.debug(tag_response)
+            logger.info("Tagging image {} as {}".format(image, new_full_name))
+            try:
+                tag_response = docker_client.tag(image, new_name, tag,
+                                                 force=True)
+                if not tag_response:
+                    msg = "Error while tagging image"
+                    logger.critical(msg)
+                    raise Exception(msg)
 
-            logger.info("pushing image {}".format(new_full_name))
-            # TODO: push fails with image with digest
+            except docker.errors.APIError as e:
+                logger.critical(e)
+                raise Exception(e)
+
+            logger.info("Pushing image {}".format(new_full_name))
             for line in docker_client.push(new_full_name, stream=True):
-                # skip lines with progress bar
-                if "progress" not in line:
-                    logger.info(line)
-                    # TODO: verify if push was success
+                line_info = anymarkup.parse(line)
+                if "progress" in line_info:
+                    # don't print progress information
+                    # showing status is enough for now
+                    continue
+                elif "status" in line_info:
+                    logger.info(line_info["status"])
+                elif "errorDetail" in line_info:
+                    msg = line_info["errorDetail"]["message"]
+                    logger.critical(msg)
+                    raise Exception(msg)
 
     def update_artifacts_images(self):
         """
