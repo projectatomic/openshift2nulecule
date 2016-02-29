@@ -15,8 +15,10 @@ class OpenshiftClient(object):
 
     # path to oc binary
     oc = None
+
     namespace = None
     oc_config = None
+
 
     def __init__(self, oc=None, namespace=None, oc_config=None):
         if oc:
@@ -28,6 +30,26 @@ class OpenshiftClient(object):
 
         if oc_config:
             self.oc_config = utils.get_path(oc_config)
+
+    def get_username(self):
+        """
+        Return the currently authenticated user name
+        """
+        ec, stdout, stderr = self._call_oc(["whoami"])
+        if ec == 0:
+            return stdout
+        else:
+            return None
+
+    def get_token(self):
+        """
+        Get the token the current session is using.
+        """
+        ec, stdout, stderr = self._call_oc(["whoami", "-t"])
+        if ec == 0:
+            return stdout
+        else:
+            return None
 
     @staticmethod
     def _find_oc():
@@ -166,25 +188,26 @@ class ExportedProject(object):
                     if "securityContext" in c.keys():
                         del c["securityContext"]
 
-    def pull_images(self, registry, login, only_internal=True):
+    def pull_images(self, registry, username, password, only_internal=True):
         """
         This pulls all images that are mentioned in artifact.
 
         Args:
             registry (str): url of exposed OpenShift Docker registry
-            login (str): username:password for OpenShift Docker registry
+            username (str): username for for OpenShift Docker registry
+            password (str): password for OpenShift Docker registry
             only_internal (bool): if True only images that are in internal
                                   OpenShift Docker registry, otherwise pulls
                                   all images (default is True)
 
         """
-        logger.debug("Pulling images to local registry only_internal: {}, "
-                     " registry:{}, login:{}".format(only_internal, registry,
-                                                     login))
+        logger.debug("Pulling images (only_internal: {}, registry:{},"
+                     " login:{}:{})".format(only_internal, registry,
+                                            username, password))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
-        login_response = docker_client.login(username=login.split(":")[0],
-                                             password=login.split(":")[1],
+        login_response = docker_client.login(username=username,
+                                             password=password,
                                              registry=registry)
         logger.info(login_response)
         for image_info in self.images:
@@ -203,26 +226,28 @@ class ExportedProject(object):
                     logger.info(line)
                     # TODO: verify pull success
 
-    def push_images(self, registry, login, only_internal=True):
+    def push_images(self, registry, username, password, only_internal=True):
         """
         This pushes all images that are mentioned in artifact.
 
         Args:
             registry (str): url of registry
-            login (str): username:password for docker registry
+            username (str): username for docker registry. If None
+                            (don't autheticate to registry)
+            password (str): password for docker registry
             only_internal (bool): if True only images that are in internal
                                   OpenShift Docker registry, otherwise pulls
                                   all images (default is True)
 
         """
         logger.debug("pushing images to registry only_internal: {}, "
-                     " registry:{}, login:{}".format(only_internal, registry,
-                                                     login))
+                     "registry:{}, login:{}:{}".format(only_internal, registry,
+                                                       username, password))
 
         docker_client = docker.Client(base_url='unix://var/run/docker.sock')
-        if login:
-            login_response = docker_client.login(username=login.split(":")[0],
-                                                 password=login.split(":")[1],
+        if username and password:
+            login_response = docker_client.login(username=username,
+                                                 password=password,
                                                  registry=registry)
             logger.debug(login_response)
             # TODO: check login_response

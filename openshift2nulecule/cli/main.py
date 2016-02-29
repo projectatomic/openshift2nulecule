@@ -47,11 +47,7 @@ class CLI():
                                  action='store_true')
 
         self.parser.add_argument("--oc-registry-host",
-                                 help="OpenShift internal registry hostname",
-                                 required=False)
-        self.parser.add_argument("--oc-registry-login",
-                                 help="Login information for OpenShift "
-                                      "internal registry (username:passoword)",
+                                 help="Hostname of exposed internal OpenShift registry",
                                  required=False)
 
         self.parser.add_argument("--export-images",
@@ -66,7 +62,7 @@ class CLI():
                                  help="External registry hostname",
                                  required=False)
         self.parser.add_argument("--registry-login",
-                                 help="Login information for registry "
+                                 help="Login information for registry (if required) "
                                       "(username:passoword)",
                                  required=False)
 
@@ -83,6 +79,18 @@ class CLI():
             raise Exception(msg)
 
         nulecule_dir = utils.get_path(args.output)
+
+        # validate and parse --registry-login
+        if args.registry_login is None:
+            registry_user = None
+            registry_password = None
+        elif len(args.registry_login.split(":")) == 2:
+            registry_user = args.registry_login.split(":")[0]
+            registry_password = args.registry_login.split(":")[1]
+        else:
+            msg = "Invalid format of --registry-login. Use (username:password)"
+            logger.critical(msg)
+            raise Exception(msg)
 
         if os.path.exists(nulecule_dir):
             msg = "{} must not exist".format(nulecule_dir)
@@ -106,15 +114,15 @@ class CLI():
             elif args.export_images == "all":
                 only_internal = False
 
-            # TODO: add check if export_images oc-registry-host has to be set
             exported_project.pull_images(args.oc_registry_host,
-                                         args.oc_registry_login,
+                                         oc.get_username(),
+                                         oc.get_token(),
                                          only_internal)
 
-            # if registy-host is not set we only pull images
+            # if registy-host is not set do not perform push
             if args.registry_host:
                 exported_project.push_images(args.registry_host,
-                                             args.registry_login,
+                                             registry_user, registry_password,
                                              only_internal)
 
             exported_project.update_artifacts_images()
