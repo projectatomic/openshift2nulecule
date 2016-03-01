@@ -23,7 +23,7 @@ This tool is creating new Nulecule application with Kubernetes artifacts
 from OpenShift project.
 
 %prep
-%autosetup -n %{name}-%{commit0}
+%autosetup -n %{name}-%{version}
 
 %build
 %py2_build
@@ -40,6 +40,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/openshift2nulecule
 
 %changelog
+* Tue Mar 1 2016 Tomas Kral <tkral@redhat.com> 0.0.2-3
+- fix build direcotry name for autosetup
+
 * Wed Feb 17 2016 Tomas Kral <tkral@redhat.com> 0.0.2-2
 - update source - direct link to github
 
