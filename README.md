@@ -97,7 +97,7 @@ yum install openshift2nulecule
 Easies way how to run openshift2nulecule as Docker container is to use [Atomic](https://github.com/projectatomic/atomic) tool.
 
 ```sh
-atomic run tomaskral/openshit2nulecule \
+atomic run tomaskral/openshift2nulecule \
   --project testing \
   --output $HOME/mytest \
   --oc-config=$HOME/.kube/config
@@ -107,7 +107,7 @@ in most cases setting it to default `$HOME/.kube/config` should be enough.
 
 Example of running openshift2nulecule container without Atomic tool:
 ```sh
-docker run -it --rm --privileged --net=host -v /:/host tomaskral/openshit2nulecule \
+docker run -it --rm --privileged --net=host -v /:/host tomaskral/openshift2nulecule \
   --project testing \
   --output $HOME/mytest \
   --oc-config=$HOME/.kube/config
