@@ -1,4 +1,6 @@
 ## openshift2nulecule unreleased
+- ability to export images from  internal OpenShift registry.
+  Options to configure that: `--oc-registry-host`, `--export-images`, `--registry-host`, `--registry-login`
 - add Dockerfile
 - finding path to `oc` binary 
 - detection if program is running inside container (using /host)
