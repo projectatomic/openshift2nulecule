@@ -23,23 +23,21 @@ logger.addHandler(ch)
 
 class CLI():
     def __init__(self):
-        self.parser = argparse.ArgumentParser()
+        self.parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
         self.parser.add_argument("--output",
-                                 help="Directory where new Nulecule app"
-                                 " will be created (must not exist)",
+                                 help="Directory where the new Nulecule app will be created (must not exist)",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--project",
-                                 help="OpenShift project (namespace) to export"
-                                      " as Nulecule application",
+                                 help="OpenShift project (namespace) to export as a Nulecule application",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--oc",
-                                 help="Path to oc binary",
+                                 help="Path to the oc binary",
                                  type=str,
                                  required=False)
         self.parser.add_argument("--oc-config",
-                                 help="Path to config file for oc command",
+                                 help="Path to the config file for the oc command",
                                  type=str,
                                  required=False)
         self.parser.add_argument("--debug",
@@ -47,22 +45,27 @@ class CLI():
                                  action='store_true')
 
         self.parser.add_argument("--oc-registry-host",
-                                 help="Hostname of exposed internal OpenShift registry",
+                                 help="Hostname of the exposed internal OpenShift registry",
                                  required=False)
 
         self.parser.add_argument("--export-images",
-                                 help="Pull images from OpenShift registry to "
-                                      "local Docker instance and push them to "
-                                      "remote registry (--registry-host) ",
+                                 help="Pull images that are specified in OpenShift "
+                                      "artifacts to a local Docker instance \n"
+                                      "and push them to a remote registry (specified by --registry-host).\n"
+                                      "Choices are:\n"
+                                      " 'internal': export only images from the internal OpenShift registry\n"
+                                      " 'all': export all images even from an external registries\n"
+                                      " 'none': do not export any images (default)",
                                  choices=["none", "internal", "all"],
                                  default="none",
                                  required=False)
 
         self.parser.add_argument("--registry-host",
-                                 help="External registry hostname",
+                                 help="External registry hostname. Images that are pulled from an internal\n"
+                                      "OpenShift registry or other registries are pushed there.\n",
                                  required=False)
         self.parser.add_argument("--registry-login",
-                                 help="Login information for registry (if required) "
+                                 help="Login information for the external registry (if required) "
                                       "(username:passoword)",
                                  required=False)
 
@@ -78,7 +81,10 @@ class CLI():
             logger.critical(msg)
             raise Exception(msg)
 
-        nulecule_dir = utils.get_path(args.output)
+        if args.export_images != 'none' and not args.registry_host:
+            msg = "With --export-images you need also set --registry-host"
+            logger.critical(msg)
+            raise Exception(msg)
 
         # validate and parse --registry-login
         if args.registry_login is None:
@@ -91,6 +97,8 @@ class CLI():
             msg = "Invalid format of --registry-login. Use (username:password)"
             logger.critical(msg)
             raise Exception(msg)
+
+        nulecule_dir = utils.get_path(args.output)
 
         if os.path.exists(nulecule_dir):
             msg = "{} must not exist".format(nulecule_dir)
