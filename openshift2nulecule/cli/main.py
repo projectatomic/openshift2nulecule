@@ -23,37 +23,78 @@ logger.addHandler(ch)
 
 class CLI():
     def __init__(self):
-        self.parser = argparse.ArgumentParser()
+        self.parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
         self.parser.add_argument("--output",
-                                 help="Directory where new Nulecule app"
-                                 " will be created (must not exist)",
+                                 help="Directory where the new Nulecule app will be created (must not exist)",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--project",
-                                 help="OpenShift project (namespace) to export"
-                                      " as Nulecule application",
+                                 help="OpenShift project (namespace) to export as a Nulecule application",
                                  type=str,
                                  required=True)
         self.parser.add_argument("--oc",
-                                 help="Path to oc binary",
+                                 help="Path to the oc binary",
                                  type=str,
                                  required=False)
         self.parser.add_argument("--oc-config",
-                                 help="Path to config file for oc command",
+                                 help="Path to the config file for the oc command",
                                  type=str,
                                  required=False)
         self.parser.add_argument("--debug",
                                  help="Show debug messages",
                                  action='store_true')
 
+        self.parser.add_argument("--oc-registry-host",
+                                 help="Hostname of the exposed internal OpenShift registry",
+                                 required=False)
+
+        self.parser.add_argument("--export-images",
+                                 help="Pull images that are specified in OpenShift "
+                                      "artifacts to a local Docker instance \n"
+                                      "and push them to a remote registry (specified by --registry-host).\n"
+                                      "Choices are:\n"
+                                      " 'internal': export only images from the internal OpenShift registry\n"
+                                      " 'all': export all images even from an external registries\n"
+                                      " 'none': do not export any images (default)",
+                                 choices=["none", "internal", "all"],
+                                 default="none",
+                                 required=False)
+
+        self.parser.add_argument("--registry-host",
+                                 help="External registry hostname. Images that are pulled from an internal\n"
+                                      "OpenShift registry or other registries are pushed there.\n",
+                                 required=False)
+        self.parser.add_argument("--registry-login",
+                                 help="Login information for the external registry (if required) "
+                                      "(username:passoword)",
+                                 required=False)
+
     def run(self):
         args = self.parser.parse_args()
 
         if args.debug:
             logger.setLevel(logging.DEBUG)
+        logger.debug("Running with arguments {}".format(args))
 
         if utils.in_container() and not os.path.isabs(args.output):
-            msg = "If running inside container --output path has to be absolute"
+            msg = "If running inside container --output path has to be absolute path"
+            logger.critical(msg)
+            raise Exception(msg)
+
+        if args.export_images != 'none' and not args.registry_host:
+            msg = "With --export-images you need also set --registry-host"
+            logger.critical(msg)
+            raise Exception(msg)
+
+        # validate and parse --registry-login
+        if args.registry_login is None:
+            registry_user = None
+            registry_password = None
+        elif len(args.registry_login.split(":")) == 2:
+            registry_user = args.registry_login.split(":")[0]
+            registry_password = args.registry_login.split(":")[1]
+        else:
+            msg = "Invalid format of --registry-login. Use (username:password)"
             logger.critical(msg)
             raise Exception(msg)
 
@@ -70,12 +111,31 @@ class CLI():
         oc = OpenshiftClient(oc=args.oc,
                              namespace=args.project,
                              oc_config=args.oc_config)
-        artifacts = oc.export_all()
 
-        # remove  ugly thing to do :-(
-        # I don't know hot to get securityContext and Selinux
-        # to work on k8s for now :-(
-        artifacts = oc.remove_securityContext(artifacts)
+        # export project info from openshift
+        exported_project = oc.export_project()
+
+        # export images
+        if args.export_images != "none":
+            if args.export_images == "internal":
+                only_internal = True
+            elif args.export_images == "all":
+                only_internal = False
+
+            exported_project.pull_images(args.oc_registry_host,
+                                         oc.get_username(),
+                                         oc.get_token(),
+                                         only_internal)
+
+            # if registy-host is not set do not perform push
+            if args.registry_host:
+                exported_project.push_images(args.registry_host,
+                                             registry_user, registry_password,
+                                             only_internal)
+
+            exported_project.update_artifacts_images()
+
+        artifacts = exported_project.artifacts
 
         # list of artifact for Nulecule file
         nulecule_artifacts = []
