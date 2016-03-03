@@ -14,7 +14,7 @@ BuildRequires: python >= 2.4
 Requires:      python-requests
 Requires:      python-anymarkup
 Requires:      python-ipaddress
-Requires:      python-docker-py
+Requires:      python-docker-py >= 1.6.0
 
 
 %description
