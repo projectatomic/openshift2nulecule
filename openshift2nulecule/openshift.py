@@ -226,7 +226,7 @@ class ExportedProject(object):
                     continue
             image = image_info["image"]
             logger.info("Pulling image {}".format(image))
-            for line in docker_client.pull(image, stream=True):
+            for line in docker_client.pull(image, stream=True, insecure_registry=True):
                 line_info = anymarkup.parse(line)
                 if "progress" in line_info:
                     # don't print progress information
