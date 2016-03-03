@@ -205,7 +205,7 @@ class ExportedProject(object):
                      " login:{}:{})".format(only_internal, registry,
                                             username, password))
 
-        docker_client = docker.Client(base_url='unix://var/run/docker.sock')
+        docker_client = docker.Client(base_url='unix://var/run/docker.sock', version='auto')
 
         try:
             login_response = docker_client.login(username=username,
@@ -226,7 +226,7 @@ class ExportedProject(object):
                     continue
             image = image_info["image"]
             logger.info("Pulling image {}".format(image))
-            for line in docker_client.pull(image, stream=True):
+            for line in docker_client.pull(image, stream=True, insecure_registry=True):
                 line_info = anymarkup.parse(line)
                 if "progress" in line_info:
                     # don't print progress information
@@ -257,7 +257,7 @@ class ExportedProject(object):
                      "registry:{}, login:{}:{}".format(only_internal, registry,
                                                        username, password))
 
-        docker_client = docker.Client(base_url='unix://var/run/docker.sock')
+        docker_client = docker.Client(base_url='unix://var/run/docker.sock', version='auto')
 
         if username and password:
             try:

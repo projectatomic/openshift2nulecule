@@ -1,3 +1,6 @@
+## openshift2nulecule 0.0.4 (03-03-2016)
+- bugfix release for 0.0.3
+
 ## openshift2nulecule 0.0.3 (03-02-2016)
 - ability to export images from  internal OpenShift registry.
   Options to configure that: `--oc-registry-host`, `--export-images`, `--registry-host`, `--registry-login`
