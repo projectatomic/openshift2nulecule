@@ -100,17 +100,26 @@ Easies way how to run openshift2nulecule as Docker container is to use [Atomic](
 atomic run tomaskral/openshift2nulecule \
   --project testing \
   --output $HOME/mytest \
-  --oc-config=$HOME/.kube/config
+  --oc-config=$HOME/.kube/config \
+  --oc-registry-host 172.30.22.38:5000 \
+  --export-images all \
+  --registry-host my_registry:5000
 ```
 When you are running openshift2nulecule from container, you have to always specify path to `oc` configuration file (`--oc-config`)
 in most cases setting it to default `$HOME/.kube/config` should be enough.
 
 Example of running openshift2nulecule container without Atomic tool:
 ```sh
-docker run -it --rm --privileged --net=host -v /:/host tomaskral/openshift2nulecule \
+docker run -it --rm --privileged --net=host \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /:/host \
+  tomaskral/openshift2nulecule \
   --project testing \
   --output $HOME/mytest \
   --oc-config=$HOME/.kube/config
+  --oc-registry-host 172.30.22.38:5000 \
+  --export-images all \
+  --registry-host my_registry:5000
 
 ```
 
