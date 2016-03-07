@@ -1,15 +1,14 @@
-FROM centos:7
+FROM fedora:23
 
 MAINTAINER Tomas Kral <tkral@redhat.com>
 
-LABEL RUN="docker run -it --rm \${OPT1} --privileged --user=\${SUDO_UID}:\${SUDO_GID} -v /:/host --net=host --name \${NAME} \${IMAGE}"
+LABEL RUN="docker run -it --rm \${OPT1} --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /:/host --net=host --name \${NAME} \${IMAGE}"
 
 ADD requirements.txt ./
 
-RUN yum install -y epel-release && \
-    yum install -y --setopt=tsflags=nodocs docker && \
-    yum install -y --setopt=tsflags=nodocs $(sed s/^/python-/ requirements.txt) && \
-    yum clean all
+# requires python-docker-py >= 1.6.0 that is only in testing
+RUN dnf install -y --setopt=tsflags=nodocs --enablerepo=updates-testing $(sed s/^/python-/ requirements.txt) && \
+    dnf clean all
 
 ENV PYTHONPATH  /opt/openshift2nulecule/
 
