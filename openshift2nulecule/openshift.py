@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from subprocess import Popen, PIPE
 import anymarkup
 import os
-import docker
-from docker.errors import APIError
 
 from openshift2nulecule import utils
 
@@ -95,7 +92,7 @@ class OpenshiftClient(object):
 
         cmd.extend(args)
 
-        ec, stdout, stderr = self._run_cmd(cmd)
+        ec, stdout, stderr = utils.run_cmd(cmd)
 
         return (ec, stdout, stderr)
 
@@ -118,37 +115,6 @@ class OpenshiftClient(object):
 
         ep = ExportedProject(artifacts=objects)
         return ep
-
-    def _run_cmd(self, cmd, checkexitcode=True, stdin=None):
-        """
-        Runs a command with its arguments and returns the results. If
-        the command gives a bad exit code then a CalledProcessError
-        exceptions is raised, just like if check_call() were called.
-
-        Args:
-            checkexitcode: Raise exception on bad exit code
-            stdin: input string to pass to stdin of the command
-
-        Returns:
-            ec:     The exit code from the command
-            stdout: stdout from the command
-            stderr: stderr from the command
-        """
-        logger.debug("running cmd %s", cmd)
-        p = Popen(cmd, stdin=PIPE, stdout=PIPE, stderr=PIPE)
-        stdout, stderr = p.communicate(stdin)
-        ec = p.returncode
-        logger.debug("\n<<< stdout >>>\n%s<<< end >>>\n", stdout)
-        logger.debug("\n<<< stderr >>>\n%s<<< end >>>\n", stderr)
-
-        # If the exit code is an error then raise exception unless
-        # we were asked not to.
-        if checkexitcode:
-            if ec != 0:
-                logger.error("cmd failed: %s" % str(cmd))
-                raise Exception("cmd: %s failed: \n%s" % (str(cmd), stderr))
-
-        return ec, stdout, stderr
 
 
 class ExportedProject(object):
@@ -205,16 +171,12 @@ class ExportedProject(object):
                      " login:{}:{})".format(only_internal, registry,
                                             username, password))
 
-        docker_client = docker.Client(base_url='unix://var/run/docker.sock', version='auto')
-
-        try:
-            login_response = docker_client.login(username=username,
-                                                 password=password,
-                                                 registry=registry)
-            logger.debug(login_response)
-        except docker.errors.APIError as e:
-            logger.critical(e)
-            raise Exception(e)
+        ec, stdout, stderr = utils.run_cmd(['docker', 'login',
+                                            '-u', username,
+                                            '-p', password,
+                                            '-e', "{}@{}".format(username,
+                                                                 registry),
+                                            registry])
 
         for image_info in self.images:
             if image_info["internal"]:
@@ -226,18 +188,8 @@ class ExportedProject(object):
                     continue
             image = image_info["image"]
             logger.info("Pulling image {}".format(image))
-            for line in docker_client.pull(image, stream=True, insecure_registry=True):
-                line_info = anymarkup.parse(line)
-                if "progress" in line_info:
-                    # don't print progress information
-                    # showing status is enough for now
-                    continue
-                elif "status" in line_info:
-                    logger.info(line_info["status"])
-                elif "errorDetail" in line_info:
-                    msg = line_info["errorDetail"]["message"]
-                    logger.critical(msg)
-                    raise Exception(msg)
+
+            ec, stdout, stderr = utils.run_cmd(['docker', 'pull', image])
 
     def push_images(self, registry, username, password, only_internal=True):
         """
@@ -257,17 +209,13 @@ class ExportedProject(object):
                      "registry:{}, login:{}:{}".format(only_internal, registry,
                                                        username, password))
 
-        docker_client = docker.Client(base_url='unix://var/run/docker.sock', version='auto')
-
         if username and password:
-            try:
-                login_response = docker_client.login(username=username,
-                                                     password=password,
-                                                     registry=registry)
-                logger.debug(login_response)
-            except docker.errors.APIError as e:
-                logger.critical(e)
-                raise Exception(e)
+            ec, stdout, stderr = utils.run_cmd(['docker', 'login',
+                                                '-u', username,
+                                                '-p', password,
+                                                '-e', "{}@{}".format(username,
+                                                                     registry),
+                                                registry])
 
         for image_info in self.images:
             if only_internal and not image_info["internal"]:
@@ -295,31 +243,12 @@ class ExportedProject(object):
             image_info["image"] = new_full_name
 
             logger.info("Tagging image {} as {}".format(image, new_full_name))
-            try:
-                tag_response = docker_client.tag(image, new_name, tag,
-                                                 force=True)
-                if not tag_response:
-                    msg = "Error while tagging image"
-                    logger.critical(msg)
-                    raise Exception(msg)
 
-            except docker.errors.APIError as e:
-                logger.critical(e)
-                raise Exception(e)
+            ec, stdout, stderr = utils.run_cmd(['docker', 'tag', '-f', image,
+                                                new_full_name])
 
             logger.info("Pushing image {}".format(new_full_name))
-            for line in docker_client.push(new_full_name, stream=True):
-                line_info = anymarkup.parse(line)
-                if "progress" in line_info:
-                    # don't print progress information
-                    # showing status is enough for now
-                    continue
-                elif "status" in line_info:
-                    logger.info(line_info["status"])
-                elif "errorDetail" in line_info:
-                    msg = line_info["errorDetail"]["message"]
-                    logger.critical(msg)
-                    raise Exception(msg)
+            ec, stdout, stderr = utils.run_cmd(['docker', 'pull', image])
 
     def update_artifacts_images(self):
         """
