@@ -8,6 +8,7 @@ ADD requirements.txt ./
 
 # requires python-docker-py >= 1.6.0 that is only in testing
 RUN dnf install -y --setopt=tsflags=nodocs --enablerepo=updates-testing $(sed s/^/python-/ requirements.txt) && \
+    dnf install -y --setopt=tsflags=nodocs docker && \
     dnf clean all
 
 ENV PYTHONPATH  /opt/openshift2nulecule/
