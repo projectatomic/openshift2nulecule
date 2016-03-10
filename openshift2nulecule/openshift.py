@@ -248,7 +248,7 @@ class ExportedProject(object):
                                                 new_full_name])
 
             logger.info("Pushing image {}".format(new_full_name))
-            ec, stdout, stderr = utils.run_cmd(['docker', 'pull', image])
+            ec, stdout, stderr = utils.run_cmd(['docker', 'push', new_full_name])
 
     def update_artifacts_images(self):
         """
