@@ -5,6 +5,7 @@ import anymarkup
 import os
 
 from openshift2nulecule import utils
+from openshift2nulecule.constants import NULECULE_PROVIDERS
 
 logger = logging.getLogger(__name__)
 
@@ -98,23 +99,35 @@ class OpenshiftClient(object):
 
     def export_project(self):
         """
-        only kubernetes things for now
+        Export configuration from Openshift for various providers
+
+        Returns:
+            A dict with keys as provider and value as artifacts corresponding
+            to that provider.
         """
         # Resources to export.
         # Don't export Pods for now.
         # Exporting ReplicationControllers should be enough.
         # Ideally this should detect Pods that are not created by
         # ReplicationController and only export those.
-        resources = ["replicationcontrollers", "persistentvolumeclaims",
-                     "services"]
+        exported_project = {}
+        for provider in NULECULE_PROVIDERS:
+            if provider == "kubernetes":
+                resources = ["replicationcontrollers",
+                             "persistentvolumeclaims",
+                             "services"]
+            elif provider == "openshift":
+                resources = ["all"]
 
-        # output of this export is kind List
-        args = ["export", ",".join(resources), "-o", "json"]
-        ec, stdout, stderr = self._call_oc(args)
-        objects = anymarkup.parse(stdout, format="json", force_types=None)
+            # output of this export is kind List
+            args = ["export", ",".join(resources), "-o", "json"]
+            ec, stdout, stderr = self._call_oc(args)
+            objects = anymarkup.parse(stdout, format="json", force_types=None)
 
-        ep = ExportedProject(artifacts=objects)
-        return ep
+            ep = ExportedProject(artifacts=objects)
+            exported_project[provider] = ep
+
+        return exported_project
 
 
 class ExportedProject(object):

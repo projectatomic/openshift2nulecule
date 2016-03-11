@@ -6,6 +6,7 @@ import argparse
 import logging
 import anymarkup
 
+from openshift2nulecule.constants import NULECULE_PROVIDERS
 from openshift2nulecule.openshift import OpenshiftClient
 from openshift2nulecule import utils
 
@@ -105,7 +106,9 @@ class CLI():
             logger.critical(msg)
             raise Exception(msg)
 
-        artifacts_dir = os.path.join(nulecule_dir, "artifacts", "kubernetes")
+        artifacts_dir = os.path.join(nulecule_dir, "artifacts")
+        provider_paths = {provider: os.path.join(artifacts_dir, provider)
+                          for provider in NULECULE_PROVIDERS}
         nulecule_file = os.path.join(nulecule_dir, "Nulecule")
 
         oc = OpenshiftClient(oc=args.oc,
@@ -122,37 +125,39 @@ class CLI():
             elif args.export_images == "all":
                 only_internal = False
 
-            exported_project.pull_images(args.oc_registry_host,
-                                         oc.get_username(),
-                                         oc.get_token(),
-                                         only_internal)
+            exported_project['openshift'].pull_images(args.oc_registry_host,
+                                                      oc.get_username(),
+                                                      oc.get_token(),
+                                                      only_internal)
 
             # if registy-host is not set do not perform push
             if args.registry_host:
-                exported_project.push_images(args.registry_host,
-                                             registry_user, registry_password,
-                                             only_internal)
+                exported_project['openshift'].push_images(args.registry_host,
+                                                          registry_user,
+                                                          registry_password,
+                                                          only_internal)
+            for provider in exported_project:
+                exported_project[provider].update_artifacts_images()
 
-            exported_project.update_artifacts_images()
+        provider_artifacts = {}
+        for provider, path in provider_paths.items():
+            # list of artifact for Nulecule file
+            nulecule_artifacts = []
 
-        artifacts = exported_project.artifacts
-
-        # list of artifact for Nulecule file
-        nulecule_artifacts = []
-
-        os.makedirs(artifacts_dir)
-
-        filepath = os.path.join(artifacts_dir, "artifacts.json")
-        nulecule_artifacts.append("file://{}".format(os.path.relpath(
-            filepath, nulecule_dir)))
-        anymarkup.serialize_file(artifacts, filepath, format="json")
+            os.makedirs(path)
+            filepath = os.path.join(path, "artifacts.json")
+            nulecule_artifacts.append("file://{}".format(os.path.relpath(
+                filepath, nulecule_dir)))
+            anymarkup.serialize_file(exported_project[provider].artifacts,
+                                     filepath,
+                                     format="json")
+            provider_artifacts[provider] = nulecule_artifacts
 
         nulecule = {"specversion": "0.0.2",
                     "id": args.project,
                     "metadata": {"name": args.project},
                     "graph": [{"name": args.project,
-                               "artifacts":
-                               {"kubernetes": nulecule_artifacts}}]}
+                               "artifacts": provider_artifacts}]}
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
         utils.generate_dockerfile(nulecule_dir)
