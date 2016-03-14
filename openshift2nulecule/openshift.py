@@ -124,7 +124,15 @@ class OpenshiftClient(object):
             ec, stdout, stderr = self._call_oc(args)
             objects = anymarkup.parse(stdout, format="json", force_types=None)
 
-            ep = ExportedProject(artifacts=objects)
+            # convert OpenShift List to array
+            if objects["kind"] == "List":
+                artifacts = objects["items"]
+            else:
+                msg = "Output of `oc export` command is of diferent kind than 'List'"
+                logger.critical(msg)
+                raise Exception(msg)
+
+            ep = ExportedProject(artifacts=artifacts)
             exported_project[provider] = ep
 
         return exported_project
@@ -148,7 +156,7 @@ class ExportedProject(object):
 
         # get all images of all ReplicationControllers
         self.images = []
-        for artifact in self.artifacts["items"]:
+        for artifact in self.artifacts:
             # TODO: add support for other kinds (Pod, DeploymentConfig)
             if artifact["kind"] == "ReplicationController":
                 self.images.extend(utils.get_image_info(artifact))
@@ -158,7 +166,7 @@ class ExportedProject(object):
         Remove securityContext from all objects in kind_list.
         """
 
-        for obj in self.artifacts['items']:
+        for obj in self.artifacts:
             #  remove securityContext from pods
             if obj['kind'].lower() == 'pod':
                 if "securityContext" in obj['spec'].keys():
@@ -270,7 +278,7 @@ class ExportedProject(object):
         all artifacts.
         """
 
-        for artifact in self.artifacts["items"]:
+        for artifact in self.artifacts:
             # TODO: add support for other kinds (Pod, DeploymentConfig)
             if artifact["kind"] == "ReplicationController":
                 for container in \

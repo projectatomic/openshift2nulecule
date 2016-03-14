@@ -2,6 +2,7 @@
 import os
 from subprocess import Popen, PIPE
 import logging
+import itertools
 from openshift2nulecule.constants import (HOST_DIR,
                                           NULECULE_SPECVERSION,
                                           NULECULE_PROVIDERS,
@@ -201,3 +202,26 @@ def run_cmd(cmd, checkexitcode=True, stdin=None):
             raise Exception("cmd: %s failed: \n%s" % (str(cmd), stderr))
 
     return ec, stdout, stderr
+
+
+def get_new_name(filepath):
+    """
+    If filepath exists get new one that doesn't.
+    Changes filename of file in path.
+    Example:
+      if /foo/bar.json exists retruns /foo/bar_1.json
+
+    Args:
+      filepath - existing filepath
+
+    Returns:
+      str - new filepath that is not existing.
+
+    """
+    base, ext = os.path.splitext(filepath)
+    new_filepath = filepath
+    i = itertools.count(1)
+    while os.path.exists(new_filepath):
+        #  create new path with index /foo/bar_1.json
+        new_filepath = "{}_{}{}".format(base, i.next(), ext)
+    return new_filepath

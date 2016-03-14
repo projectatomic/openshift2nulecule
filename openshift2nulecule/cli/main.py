@@ -145,12 +145,21 @@ class CLI():
             nulecule_artifacts = []
 
             os.makedirs(path)
-            filepath = os.path.join(path, "artifacts.json")
-            nulecule_artifacts.append("file://{}".format(os.path.relpath(
-                filepath, nulecule_dir)))
-            anymarkup.serialize_file(exported_project[provider].artifacts,
-                                     filepath,
-                                     format="json")
+            # create artifact files
+            for artifact in exported_project[provider].artifacts:
+                if "name" in artifact["metadata"]:
+                    name = artifact["metadata"]["name"]
+                kind = artifact["kind"]
+                filename = "{}-{}.json".format(name, kind)
+                filepath = os.path.join(path, filename)
+
+                if os.path.exists(filepath):
+                    filepath = utils.get_new_name(filepath)
+
+                nulecule_artifacts.append("file://{}".format(os.path.relpath(
+                                          filepath, nulecule_dir)))
+                anymarkup.serialize_file(artifact, filepath, format="json")
+
             provider_artifacts[provider] = nulecule_artifacts
 
         nulecule = {"specversion": "0.0.2",
