@@ -48,11 +48,13 @@ Arguments related to exporting images:
                       (if it is required)
 
 
-Example:
+Following example will pull all images that are used in project and  will push them to `localhost:5000` registry.
 ```sh
 openshift2nulecule --project mlb --output ./myapp --oc-registry-host docker-registry.cdk.10.2.2.2.xip.io --export-images all --registry-host localhost:5000 
 ```
 
+For testing you might want to skip push stage. You can do this by adding `--skip-push` option.
+With this option openshift2nulecule will only pull images to you local docker instance.
 
 # Installation
 RPMs: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/

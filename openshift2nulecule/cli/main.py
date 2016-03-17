@@ -69,6 +69,10 @@ class CLI():
                                  help="Login information for the external registry (if required) "
                                       "(username:passoword)",
                                  required=False)
+        self.parser.add_argument("--skip-push",
+                                 help="Don't push images to external registry. (usefull for testing)",
+                                 action='store_true')
+
 
     def run(self):
         args = self.parser.parse_args()
@@ -82,8 +86,8 @@ class CLI():
             logger.critical(msg)
             raise Exception(msg)
 
-        if args.export_images != 'none' and not args.registry_host:
-            msg = "With --export-images you need also set --registry-host"
+        if not args.skip_push and args.export_images != 'none' and not args.registry_host:
+            msg = "With --export-images you also need set --registry-host. If you don't want to push images to registry, you have to use --skip-push"
             logger.critical(msg)
             raise Exception(msg)
 
@@ -130,8 +134,8 @@ class CLI():
                                                       oc.get_token(),
                                                       only_internal)
 
-            # if registy-host is not set do not perform push
-            if args.registry_host:
+            # if registy-host is not set or skip-push is set do not perform push
+            if args.registry_host and not args.skip_push:
                 exported_project['openshift'].push_images(args.registry_host,
                                                           registry_user,
                                                           registry_password,
