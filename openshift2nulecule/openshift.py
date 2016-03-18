@@ -117,7 +117,8 @@ class OpenshiftClient(object):
                              "persistentvolumeclaims",
                              "services"]
             elif provider == "openshift":
-                resources = ["all"]
+                resources = ["service", "deploymentConfig", "buildConfig",
+                             "imageStream", "route"]
 
             # output of this export is kind List
             args = ["export", ",".join(resources), "-o", "json"]
