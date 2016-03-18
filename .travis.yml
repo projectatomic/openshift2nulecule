@@ -1,0 +1,31 @@
+sudo: required
+
+language: python
+
+python:
+    - "2.7"
+
+services:
+  - docker
+
+before_install:
+    # add 172.16.0.0/12 as insecure registry (OpenShift internal registry)
+    - sudo sed -i "s/\DOCKER_OPTS=\"/DOCKER_OPTS=\"--insecure-registry=172.16.0.0\/12 /g" /etc/default/docker
+    - sudo cat /etc/default/docker
+    - sudo service docker restart
+    # install Atomic cli
+    - sudo apt-get install -y go-md2man rpm python-selinux python-rpm python-dbus pylint
+    - sudo pip install docker-py 
+    - sudo pip install git+https://github.com/projectatomic/atomic@v1.9
+    # start OpenShift 
+    - ./tests/tests.sh prepare
+
+install:
+    - python setup.py install
+
+script:
+    - ./tests/tests.sh run_tests
+
+after_script:
+    - ./tests/tests.sh clean
+
