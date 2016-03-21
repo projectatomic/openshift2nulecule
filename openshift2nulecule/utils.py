@@ -5,8 +5,7 @@ import logging
 import itertools
 from openshift2nulecule.constants import (HOST_DIR,
                                           NULECULE_SPECVERSION,
-                                          NULECULE_PROVIDERS,
-                                          ATOMICAPP_VERSION)
+                                          NULECULE_PROVIDERS)
 import ipaddress
 
 logger = logging.getLogger(__name__)
@@ -64,15 +63,26 @@ def get_path(path):
             return os.path.abspath(expanded_path)
 
 
-def generate_dockerfile(nulecule_dir):
+def generate_dockerfile(nulecule_dir, atomicapp_version):
+    """
+    Generate a Dockerfile for an exported application automatically, by
+    reading the contents of the directory where the exported artifacts reside.
 
+    Args:
+        nulecule_dir (str): path to the directory where all Nulecule artifacts
+                            reside
+        atomicapp_version (str): Atomic App version to be used in Dockerfile.
+
+    Returns:
+        None
+    """
     files = [file for file in os.listdir(nulecule_dir)
              if os.path.isfile(os.path.join(nulecule_dir, file))]
     files.append('Dockerfile')
     dockerfile = open(os.path.join(nulecule_dir, 'Dockerfile'), 'w')
 
     dockerfile.writelines([
-        'FROM projectatomic/atomicapp:{}\n'.format(ATOMICAPP_VERSION),
+        'FROM projectatomic/atomicapp:{}\n'.format(atomicapp_version),
         '\n',
         'LABEL io.projectatomic.nulecule.providers="{}" \\\n'.format(
             ','.join(NULECULE_PROVIDERS)),

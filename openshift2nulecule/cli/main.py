@@ -6,7 +6,8 @@ import argparse
 import logging
 import anymarkup
 
-from openshift2nulecule.constants import NULECULE_PROVIDERS
+from openshift2nulecule.constants import (NULECULE_PROVIDERS,
+                                          ATOMICAPP_VERSION)
 from openshift2nulecule.openshift import OpenshiftClient
 from openshift2nulecule import utils
 
@@ -68,6 +69,12 @@ class CLI():
         self.parser.add_argument("--registry-login",
                                  help="Login information for the external registry (if required) "
                                       "(username:passoword)",
+                                 required=False)
+
+        self.parser.add_argument("--atomicapp-ver",
+                                 help="Specify custom Atomic App version for the Dockerfile that will be generated.",
+                                 type=str,
+                                 default=ATOMICAPP_VERSION,
                                  required=False)
 
     def run(self):
@@ -169,7 +176,7 @@ class CLI():
                                "artifacts": provider_artifacts}]}
         anymarkup.serialize_file(nulecule, nulecule_file, format="yaml")
 
-        utils.generate_dockerfile(nulecule_dir)
+        utils.generate_dockerfile(nulecule_dir, args.atomicapp_ver)
         logger.info("Nulecule application created in {}".format(
             utils.remove_path(nulecule_dir)))
 
