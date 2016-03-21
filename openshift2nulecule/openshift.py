@@ -158,8 +158,8 @@ class ExportedProject(object):
         # get all images of all ReplicationControllers
         self.images = []
         for artifact in self.artifacts:
-            # TODO: add support for other kinds (Pod, DeploymentConfig)
-            if artifact["kind"] == "ReplicationController":
+            # TODO: add support for other kinds (Pod, ....?)
+            if artifact["kind"] in ["ReplicationController", "DeploymentConfig"]:
                 self.images.extend(utils.get_image_info(artifact))
 
     def _remove_securityContext(self):
@@ -280,8 +280,8 @@ class ExportedProject(object):
         """
 
         for artifact in self.artifacts:
-            # TODO: add support for other kinds (Pod, DeploymentConfig)
-            if artifact["kind"] == "ReplicationController":
+            # TODO: add support for other kinds (Pod, ...?)
+            if artifact["kind"] in ["ReplicationController", "DeploymentConfig"]:
                 for container in \
                         artifact["spec"]["template"]["spec"]["containers"]:
                     for image in self.images:
