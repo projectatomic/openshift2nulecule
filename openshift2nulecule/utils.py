@@ -139,13 +139,12 @@ def replace_registry_host(image_name, new_registry):
 
 def get_image_info(obj):
     """
-    Checks if image specified in ReplicationController is from internal
-    registry. If it is from internal registry....
-    of registry
+    Checks if image specified in ReplicationController or DeploymentConfig
+    is from internal OpenShift registry.
     TODO: support for Pod
 
     Args:
-       obj (dict): ReplicationController
+       obj (dict): ReplicationController or DeploymentConfig
 
     Returns:
         list of dicts example:
