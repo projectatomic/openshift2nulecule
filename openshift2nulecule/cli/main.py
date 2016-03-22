@@ -160,6 +160,8 @@ class CLI():
             for artifact in exported_project[provider].artifacts:
                 if "name" in artifact["metadata"]:
                     name = artifact["metadata"]["name"]
+                else:
+                    name = "unknown"
                 kind = artifact["kind"]
                 filename = "{}-{}.json".format(name, kind)
                 filepath = os.path.join(path, filename)
