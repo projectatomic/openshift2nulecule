@@ -74,11 +74,17 @@ class CLI():
                                  help="Don't push images to external registry. (usefull for testing)",
                                  action='store_true')
 
-
         self.parser.add_argument("--atomicapp-ver",
                                  help="Specify custom Atomic App version for the Dockerfile that will be generated.",
                                  type=str,
                                  default=ATOMICAPP_VERSION,
+                                 required=False)
+
+        self.parser.add_argument("--selector",
+                                 help="Specify it in the form key=value, the only configuration that matches this will\n"
+                                      "be exported. This helps you to select app from the multiple apps deployed in a\n"
+                                      "single project.",
+                                 type=str,
                                  required=False)
 
     def run(self):
@@ -124,7 +130,8 @@ class CLI():
 
         oc = OpenshiftClient(oc=args.oc,
                              namespace=args.project,
-                             oc_config=args.oc_config)
+                             oc_config=args.oc_config,
+                             selector=args.selector)
 
         # export project info from openshift
         exported_project = oc.export_project()

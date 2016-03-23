@@ -18,13 +18,15 @@ class OpenshiftClient(object):
     namespace = None
     oc_config = None
 
-    def __init__(self, oc=None, namespace=None, oc_config=None):
+    def __init__(self, oc=None, namespace=None, oc_config=None,
+                 selector=None):
         if oc:
             self.oc = oc
         else:
             self.oc = self._find_oc()
 
         self.namespace = namespace
+        self.selector = selector
 
         if oc_config:
             self.oc_config = utils.get_path(oc_config)
@@ -127,6 +129,10 @@ class OpenshiftClient(object):
 
             # output of this export is kind List
             args = ["export", ",".join(resources), "-o", "json"]
+            # if user has specified the selector append it to command
+            if self.selector:
+                args.extend(["-l", self.selector])
+
             ec, stdout, stderr = self._call_oc(args)
             objects = anymarkup.parse(stdout, format="json", force_types=None)
 
