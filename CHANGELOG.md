@@ -1,3 +1,10 @@
+## openshift2nulecule 0.1.0 (05-04-2016)
+- added OpenShift artifacts to exported Nulecule #6
+- added `--skip-push` option #36
+- updated docs, and added docs/example.md with step by step tutorial #28
+- removed docker-py as dependency (using docker cli instead see) #21
+- added `--atomicapp-ver` to specify atomicapp version for Dockerfile #26
+
 ## openshift2nulecule 0.0.4 (03-03-2016)
 - bugfix release for 0.0.3
 
