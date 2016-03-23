@@ -110,7 +110,7 @@ class OpenshiftClient(object):
         # Exporting ReplicationControllers should be enough.
         # Ideally this should detect Pods that are not created by
         # ReplicationController and only export those.
-        exported_project = {}
+        all_artifacts = {}
         for provider in NULECULE_PROVIDERS:
             if provider == "kubernetes":
                 resources = ["replicationController",
@@ -138,10 +138,11 @@ class OpenshiftClient(object):
                 logger.critical(msg)
                 raise Exception(msg)
 
-            ep = ExportedProject(artifacts=artifacts)
-            exported_project[provider] = ep
+            all_artifacts[provider] = artifacts
 
-        return exported_project
+        ep = ExportedProject(artifacts=all_artifacts)
+
+        return ep
 
 
 class ExportedProject(object):
@@ -162,17 +163,20 @@ class ExportedProject(object):
 
         # get all images of all ReplicationControllers
         self.images = []
-        for artifact in self.artifacts:
-            # TODO: add support for other kinds (Pod, ....?)
-            if artifact["kind"] in ["ReplicationController", "DeploymentConfig"]:
-                self.images.extend(utils.get_image_info(artifact))
+        for provider in NULECULE_PROVIDERS:
+            for artifact in self.artifacts[provider]:
+                # TODO: add support for other kinds (Pod, ....?)
+                if artifact["kind"] in ["ReplicationController",
+                                        "DeploymentConfig"]:
+                    self.images.extend(utils.get_image_info(artifact))
 
     def _remove_securityContext(self):
         """
-        Remove securityContext from all objects in kind_list.
+        Remove securityContext from all objects in kind_list
+        for Kubernetes artifacts.
         """
 
-        for obj in self.artifacts:
+        for obj in self.artifacts["kubernetes"]:
             #  remove securityContext from pods
             if obj['kind'].lower() == 'pod':
                 if "securityContext" in obj['spec'].keys():
@@ -283,16 +287,16 @@ class ExportedProject(object):
         are renamed (retagged). This updates image names in
         all artifacts.
         """
-
-        for artifact in self.artifacts:
-            # TODO: add support for other kinds (Pod, ...?)
-            if artifact["kind"] in ["ReplicationController", "DeploymentConfig"]:
-                for container in \
-                        artifact["spec"]["template"]["spec"]["containers"]:
-                    for image in self.images:
-                        if container["image"] == image["original_image"]:
-                            logger.info("Updating image {} for artifact {}:{}"
-                                        .format(container["image"],
-                                                artifact["kind"],
-                                                artifact["metadata"]["name"]))
-                            container["image"] = image["image"]
+        for provider in NULECULE_PROVIDERS:
+            for artifact in self.artifacts[provider]:
+                # TODO: add support for other kinds (Pod, ...?)
+                if artifact["kind"] in ["ReplicationController", "DeploymentConfig"]:
+                    for container in \
+                            artifact["spec"]["template"]["spec"]["containers"]:
+                        for image in self.images:
+                            if container["image"] == image["original_image"]:
+                                logger.info("Updating image {} for artifact {}:{}"
+                                            .format(container["image"],
+                                                    artifact["kind"],
+                                                    artifact["metadata"]["name"]))
+                                container["image"] = image["image"]

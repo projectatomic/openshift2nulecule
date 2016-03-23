@@ -136,19 +136,19 @@ class CLI():
             elif args.export_images == "all":
                 only_internal = False
 
-            exported_project['openshift'].pull_images(args.oc_registry_host,
-                                                      oc.get_username(),
-                                                      oc.get_token(),
-                                                      only_internal)
+            exported_project.pull_images(args.oc_registry_host,
+                                         oc.get_username(),
+                                         oc.get_token(),
+                                         only_internal)
 
             # if registy-host is not set or skip-push is set do not perform push
             if args.registry_host and not args.skip_push:
-                exported_project['openshift'].push_images(args.registry_host,
-                                                          registry_user,
-                                                          registry_password,
-                                                          only_internal)
-            for provider in exported_project:
-                exported_project[provider].update_artifacts_images()
+                exported_project.push_images(args.registry_host,
+                                             registry_user,
+                                             registry_password,
+                                             only_internal)
+
+            exported_project.update_artifacts_images()
 
         provider_artifacts = {}
         for provider, path in provider_paths.items():
@@ -157,7 +157,7 @@ class CLI():
 
             os.makedirs(path)
             # create artifact files
-            for artifact in exported_project[provider].artifacts:
+            for artifact in exported_project.artifacts[provider]:
                 if "name" in artifact["metadata"]:
                     name = artifact["metadata"]["name"]
                 else:
