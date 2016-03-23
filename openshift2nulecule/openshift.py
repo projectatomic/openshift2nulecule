@@ -113,12 +113,17 @@ class OpenshiftClient(object):
         exported_project = {}
         for provider in NULECULE_PROVIDERS:
             if provider == "kubernetes":
-                resources = ["replicationcontrollers",
-                             "persistentvolumeclaims",
-                             "services"]
+                resources = ["replicationController",
+                             "persistentVolumeClaim",
+                             "service"]
             elif provider == "openshift":
-                resources = ["service", "deploymentConfig", "buildConfig",
-                             "imageStream", "route"]
+                resources = ["replicationController",
+                             "deploymentConfig",
+                             "buildConfig",
+                             "imageStream",
+                             "service",
+                             "persistentVolumeClaim",
+                             "route"]
 
             # output of this export is kind List
             args = ["export", ",".join(resources), "-o", "json"]

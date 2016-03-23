@@ -6,7 +6,7 @@ artifacts from OpenShift project.
 
 ## Limitations
  - Exports only `ReplicationControllers`, `PersistentVolumeClaims`, `Services` for *Kubernetes*.
- - Exports only `service`, `deploymentConfig`, `buildConfig`, `imageStream`, `route` for *Openshift*, other objects like `build`, `imageStreamTag`, `imageStreamImage`, `event`, `node`, `pod`, `replicationController`, `persistentVolume`, `persistentVolumeClaim` are not exported at the moment.
+ - Exports only `service`, `deploymentConfig`, `buildConfig`, `imageStream`, `route`, `replicationController`, `persistentVolumeClaim` for *Openshift*, other objects like `build`, `imageStreamTag`, `imageStreamImage`, `event`, `node`, `pod`, `persistentVolume`,  are not exported at the moment.
  - Everything is exported as single artifacts containing everything.
  - ~~If you have images in internal OpenShift Docker registry,
 you have to manually export them to accessible registry and update artifact.~~
