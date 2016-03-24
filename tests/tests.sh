@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -e -x
 
 ORIGIN_CONTAINER="o2n-test-origin"
 
