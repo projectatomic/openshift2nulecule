@@ -80,9 +80,11 @@ This has been tested on ADB 1.7.1 as Fedora 23 on local machine
 
  1. Edit mlbpark Nulecule artifact 
     
-    This step is because of issue [#117](https://github.com/projectatomic/adb-atomic-developer-bundle/issues/117) in ADB
+    This step is because of issue [#117](https://github.com/projectatomic/adb-atomic-developer-bundle/issues/117) in ADB.
 
-    - `vi mlb/artifacts/kubernetes/artifacts.json`
+    Find and modify replication controller for mongodb.
+
+    - `vi mlb/artifacts/kubernetes/mongodb-1-ReplicationController.json`
     - find "volumeMounts" field in mongodb container and remove that.
 
  1. Build Docker container with Nulecule application.
@@ -113,3 +115,20 @@ This has been tested on ADB 1.7.1 as Fedora 23 on local machine
       - `export MLB_SVC_IP=$(kubectl  get svc mlbparks -o template --template="{{ .spec.clusterIP }}")`
       - `curl $MLB_SVC_IP:8080`
 
+
+## Run exported Nulecule application on OpenShift
+ 1. Run new instance of ADB/CDK with OpenShift, or use old one.
+
+ 1. Add Docker Registry that runs on your local machine as insecure registry (in ADB box)
+    (only if you are using new OpenShift ADB/CDK instance)
+    - `sudo vi /etc/sysconfig/docker`
+    - Change line `# INSECURE_REGISTRY='--insecure-registry '` to `INSECURE_REGISTRY='--insecure-registry 10.1.2.1:5000'`
+    - `sudo systemctl restart docker`
+
+ 1. Run mlbparks Nulecule app on OpenShift
+    - `oc new-project mlbimport`
+    - `atomic run 10.1.2.1:5000/mlbparks-atomicapp --provider=openshift --providerconfig=/home/vagrant/.kube/config --namespace=mlbimport`
+
+ 1.  Test it
+      - `export MLB_SVC_IP=$(oc get svc mlbparks -o template --template="{{ .spec.clusterIP }}")`
+      - `curl $MLB_SVC_IP:8080`
