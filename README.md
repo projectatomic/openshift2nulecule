@@ -23,11 +23,19 @@ If you need pass `--config` option to `oc` binary, you can do that using `--oc-c
 # Usage
 Before running this you have to be authenticated to OpenShift using `oc login` command. (see [Basic Setup and Login](https://docs.openshift.com/enterprise/3.0/cli_reference/get_started_cli.html#basic-setup-and-login)).
 
+- Export whole project
+
 ```sh
 openshift2nulecule --output=/path/to/new/myapp --project=myproject
 ```
 This will export whole project `myproject` from OpenShift
 and create new Nulecule application in `/path/to/new/myapp` directory.
+
+- Selectively export an application
+
+```bash
+openshift2nulecule --project hexboard --output ~/exported/hexboard --selector app=sketchpod
+```
 
 ## Exporting images from OpenShift
 This tool has also support for exporting images from internal OpenShift Docker registry.
