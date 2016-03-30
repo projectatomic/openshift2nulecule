@@ -124,8 +124,7 @@ class OpenshiftClient(object):
                              "buildConfig",
                              "imageStream",
                              "service",
-                             "persistentVolumeClaim",
-                             "route"]
+                             "persistentVolumeClaim"]
 
             # output of this export is kind List
             args = ["export", ",".join(resources), "-o", "json"]
