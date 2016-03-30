@@ -161,11 +161,6 @@ class ExportedProject(object):
 
         self.artifacts = artifacts
 
-        # remove  ugly thing to do :-(
-        # I don't know hot to get securityContext and Selinux
-        # to work on k8s for now :-(
-        self._remove_securityContext()
-
         # get all images of all ReplicationControllers
         self.images = []
         for provider in NULECULE_PROVIDERS:
@@ -174,21 +169,6 @@ class ExportedProject(object):
                 if artifact["kind"] in ["ReplicationController",
                                         "DeploymentConfig"]:
                     self.images.extend(utils.get_image_info(artifact))
-
-    def _remove_securityContext(self):
-        """
-        Remove securityContext from all objects in kind_list
-        for Kubernetes artifacts.
-        """
-
-        for obj in self.artifacts["kubernetes"]:
-            #  remove securityContext from pods
-            if obj['kind'].lower() == 'pod':
-                if "securityContext" in obj['spec'].keys():
-                    del obj['spec']["securityContext"]
-                for c in obj['spec']["containers"]:
-                    if "securityContext" in c.keys():
-                        del c["securityContext"]
 
     def pull_images(self, registry, username, password, only_internal=True):
         """
