@@ -1,6 +1,6 @@
 Summary:       Tool to create Nulecule based application from OpenShift
 Name:          openshift2nulecule
-Version:       0.0.4
+Version:       0.1.0
 Release:       1%{?dist}
 License:       GPLV2
 BuildArch:     noarch
@@ -14,8 +14,7 @@ BuildRequires: python >= 2.4
 Requires:      python-requests
 Requires:      python-anymarkup
 Requires:      python-ipaddress
-Requires:      python-docker-py >= 1.6.0
-
+Requires:      docker
 
 %description
 openshift2nulecule is a tool to create/export new Nulecule application with Kubernetes artifacts
@@ -39,6 +38,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/openshift2nulecule
 
 %changelog
+* Wed Apr 5 2016 Tomas Kral <tkral@redhat.com> 0.1.0-1
+- Update to 0.1.0
+- remove python-docker-py from Requires
+- add docker to Requires
+
 * Wed Mar 2 2016 Tomas Kral <tkral@redhat.com> 0.0.4-1
 - Update to 0.0.4
 - python-docker-py requires >= 1.6.0
