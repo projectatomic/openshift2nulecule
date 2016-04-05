@@ -8,9 +8,8 @@ BuildArch:     noarch
 Url:           https://github.com/projectatomic/%{name}
 Source0:       https://github.com/projectatomic/%{name}/archive/v%{version}.tar.gz
 
-BuildRequires: python2-devel >= 2.4
-BuildRequires: python-pip
-BuildRequires: python >= 2.4
+BuildRequires: python2-devel
+BuildRequires: python-setuptools
 Requires:      python-requests
 Requires:      python-anymarkup
 Requires:      python-ipaddress
