@@ -38,7 +38,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/openshift2nulecule
 
 %changelog
-* Wed Apr 5 2016 Tomas Kral <tkral@redhat.com> 0.1.0-1
+* Tue Apr 5 2016 Tomas Kral <tkral@redhat.com> 0.1.0-1
 - Update to 0.1.0
 - remove python-docker-py from Requires
 - add docker to Requires
