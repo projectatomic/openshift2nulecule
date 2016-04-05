@@ -177,6 +177,21 @@ class ExportedProject(object):
                     self.images.extend(utils.get_image_info(artifact))
 
         self._remove_imagestream_annotations()
+        self._remove_openshift_objects()
+
+    def _remove_openshift_objects(self):
+        """
+        Remove objects from OpenShift artifacts that were created automaticaly by
+        other object.
+        eg.: Remove ReplicationControllers that were created by DeploymentConfig
+        """
+        for obj in list(self.artifacts["openshift"]):
+            if obj["kind"] == "ReplicationController":
+                # check if this RC has been created by DC by checking if
+                # openshift.io/deployment-config.name annotation exists
+                deployment_config_name = obj.get("metadata", {}).get("annotations",{}).get("openshift.io/deployment-config.name",{})
+                if deployment_config_name:
+                    self.artifacts["openshift"].remove(obj)
 
     def pull_images(self, registry, username, password, only_internal=True):
         """
