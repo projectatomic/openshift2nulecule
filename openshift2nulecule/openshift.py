@@ -112,19 +112,25 @@ class OpenshiftClient(object):
         # Exporting ReplicationControllers should be enough.
         # Ideally this should detect Pods that are not created by
         # ReplicationController and only export those.
+        # Order in resource list is significant! Object are exported in same
+        # order as they are specified on command line and they will have same
+        # order in Nulecule file also.
+        # ImageStream is first as workaround for this https://github.com/openshift/origin/issues/4518
+        # But this workaround is going to work only after resolving
+        # https://github.com/projectatomic/atomicapp/issues/669
         all_artifacts = {}
         for provider in NULECULE_PROVIDERS:
             if provider == "kubernetes":
-                resources = ["replicationController",
-                             "persistentVolumeClaim",
-                             "service"]
-            elif provider == "openshift":
-                resources = ["replicationController",
-                             "deploymentConfig",
-                             "buildConfig",
-                             "imageStream",
+                resources = ["persistentVolumeClaim",
                              "service",
-                             "persistentVolumeClaim"]
+                             "replicationController"]
+            elif provider == "openshift":
+                resources = ["imageStream",
+                             "service",
+                             "persistentVolumeClaim",
+                             "replicationController",
+                             "deploymentConfig",
+                             "buildConfig"]
 
             # output of this export is kind List
             args = ["export", ",".join(resources), "-o", "json"]
