@@ -176,6 +176,8 @@ class ExportedProject(object):
                                         "DeploymentConfig"]:
                     self.images.extend(utils.get_image_info(artifact))
 
+        self._remove_imagestream_annotations()
+
     def pull_images(self, registry, username, password, only_internal=True):
         """
         This pulls all images that are mentioned in artifact.
@@ -291,3 +293,13 @@ class ExportedProject(object):
                                                     artifact["kind"],
                                                     artifact["metadata"]["name"]))
                                 container["image"] = image["image"]
+
+    def _remove_imagestream_annotations(self):
+        """
+        Remove annotations from all imageStreams.
+        This is temporary workaround for https://github.com/openshift/origin/issues/8327
+        """
+        for obj in self.artifacts["openshift"]:
+            if obj["kind"] == "ImageStream":
+                if obj.get("metadata", {}).get("annotations", {}):
+                    del obj["metadata"]["annotations"]
