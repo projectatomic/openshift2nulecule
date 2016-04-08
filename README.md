@@ -9,9 +9,6 @@ artifacts from OpenShift project.
  - Exports only `service`, `deploymentConfig`, `buildConfig`, `imageStream`, `replicationController`,
    `persistentVolumeClaim` for *Openshift*, other objects like `build`, `imageStreamTag`, `imageStreamImage`,
    `event`, `node`, `pod`, `persistentVolume`,  are not exported at the moment.
- - Everything is exported as single artifacts containing everything.
- - ~~If you have images in internal OpenShift Docker registry,
-you have to manually export them to accessible registry and update artifact.~~
  - You probably still need go through artifact and change hostnames and ip address.
 
 
@@ -33,7 +30,7 @@ openshift2nulecule --output=/path/to/new/myapp --project=myproject
 This will export whole project `myproject` from OpenShift
 and create new Nulecule application in `/path/to/new/myapp` directory.
 
-- Selectively export an application
+- Selectively export an application based on labels
 
 ```bash
 openshift2nulecule --project hexboard --output ~/exported/hexboard --selector app=sketchpod
@@ -73,7 +70,8 @@ RPMs: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
 You can also run `openshift2nulecule` as Docker container (see "Usage" section).
 
 
-## CentOS7/RHEL7 (ADB/CDK)
+## CentOS7/RHEL7
+
 
 ### CentOS7 (ADB)
 ```sh
@@ -87,7 +85,10 @@ curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-
 yum install openshift2nulecule
 ```
 
-### RHEL7 (CDK)
+### CDK
+ Already installed out of the box.
+
+### RHEL7
 ```
 # enable optional repositories
 subscription-manager repos --enable rhel-7-server-optional-rpms 
