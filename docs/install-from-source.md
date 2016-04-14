@@ -1,5 +1,5 @@
-Installation
-============
+Installation from source
+========================
 
 Usage Installation
 ------------------
