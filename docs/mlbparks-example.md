@@ -16,6 +16,19 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
 
     - `docker run -d -p 5000:5000 --name registry registry:2`
 
+    Because this tutorial is exporting images from OpenShift internal registry, 
+    we need place to push those images, where they will be accessible by other
+    OpenShift or Kubernetes clusters.
+
+    If you already have your own Docker registry running somewhere you can use it 
+    instead of this. 
+
+    You can also check [Running private docker registry for o2n](setting-up-registry.md)
+    for advenced setup, or for guide how to setup registry on different platforms than Linux.
+
+    
+
+
 
 ## Start ADB and deploy sample OpenShift application
  1. Clone the ADB repository
@@ -32,6 +45,9 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
 
     This expects that you kept IP settings in Vagrent file on default `10.1.2.2`
     If not you will have to change all IP addresses in this tutorial accordingly.
+
+    If you skipped first step, because you are using you own Docker registry replace
+    `10.1.2.1` with address of your registry.
      
     - `sudo vi /etc/sysconfig/docker`
     - Change line `# INSECURE_REGISTRY='--insecure-registry '` to `INSECURE_REGISTRY='--insecure-registry 10.1.2.1:5000'`
@@ -67,15 +83,23 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
 
 
  1. Get address of OpenShift internal Docker registry 
+    
+    ```
+    export OC_REGISTRY=$(sudo oc --config /var/lib/openshift/openshift.local.config/master/admin.kubeconfig get route docker-registry -o template --template="{{ .spec.host }}")
+    ```
 
-    ```
-    export OC_REGISTRY=$(sudo oc --config /var/lib/openshift/openshift.local.config/master/admin.kubeconfig get svc docker-registry -o template --template="{{ .spec.clusterIP }}"):5000
-    ```
+    OpenShift2Nulecule needs to know address of OpenShift's internal registry, so it can
+    pull images that were build inside OpenShift using BuildConfig.
+
+    If you are using ADB or CDK Docker registry ip address is already exposed as
+    `hub.openshift.rhel-cdk.10.1.2.2.xip.io` for CDK or  `hub.openshift.centos-7-adb.10.1.2.2.xip.io` for ADB.
+    After running command above, you can verify Docker registry address displaying `OC_REGISTRY` variable (`echo $OC_REGISTRY`)
+
 
  1. Export mlbpark project as Nulecule application
 
     ```
-    openshift2nulecule --project mlbparks --output ./mlb  --export-images all --oc-registry-host $OC_REGISTRY --registry-host $MY_REGISTRY
+    openshift2nulecule --project mlbparks --output ./mlb  --export-images all --oc-registry-host $OC_REGISTRY --registry-host $MY_REGISTRY --atomicapp-ver 0.5.0
     ```
     This command is going to export all objects in `mlbparks` project as single Nulecule application.
     All images that are used in OpenShift objects are going to be pulled to local Docker instance, and then pushed to your 
@@ -104,7 +128,12 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
    - `vagrant ssh`
 
  1. Add Docker Registry on you local machine as insecure
+
     Add your local machine's Docker registry (which was started in the first step).
+
+    If you skipped first step, because you are using you own Docker registry replace
+    `10.1.2.1` with address of your registry.
+    
     - `sudo vi /etc/sysconfig/docker`
     - Change line `# INSECURE_REGISTRY='--insecure-registry '` to `INSECURE_REGISTRY='--insecure-registry 10.1.2.1:5000'`
     - `sudo systemctl restart docker`
@@ -112,7 +141,7 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
 
  1. Label /var/lib/kubelet/pods as `svirt_sandbox_file_t`
     This step is because of bug [#117](https://github.com/projectatomic/adb-atomic-developer-bundle/issues/117) in ADB 
-    - `chcon -Rt svirt_sandbox_file_t /var/lib/kubelet/pods`
+    - `sudo chcon -Rt svirt_sandbox_file_t /var/lib/kubelet/pods`
 
  1. Run mlbparks Nulecule  app on Kubernetes.
     - `sudo -E atomic run 10.1.2.1:5000/mlbparks-atomicapp`
@@ -126,14 +155,17 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
  1. Run new instance of ADB/CDK with OpenShift, or use old one.
 
  1. Add Docker Registry that runs on your local machine as insecure registry (in ADB box)
-    (only if you are using new OpenShift ADB/CDK instance)
+
+    If you skipped first step, because you are using you own Docker registry replace
+    `10.1.2.1` with address of your registry.
+    
     - `sudo vi /etc/sysconfig/docker`
     - Change line `# INSECURE_REGISTRY='--insecure-registry '` to `INSECURE_REGISTRY='--insecure-registry 10.1.2.1:5000'`
     - `sudo systemctl restart docker`
 
  1. Run mlbparks Nulecule app on OpenShift
     - `oc new-project mlbimport`
-    - `sudo -E atomic run 10.1.2.1:5000/mlbparks-atomicapp --provider=openshift --providerconfig=/home/vagrant/.kube/config --namespace=mlbimport`
+    - `sudo -E atomic run 10.1.2.1:5000/mlbparks-atomicapp --provider=openshift --provider-config=/home/vagrant/.kube/config --namespace=mlbimport`
  1. Wait for mlbparks build to finish
     You can see log of build on web console, or in you terminal using this command `oc build-logs mlbparks-1`.
 
@@ -141,5 +173,6 @@ This has been tested on ADB 1.8.0 with Fedora 23 on host machine
     
 
  1.  Test it
-      - `export MLB_SVC_IP=$(oc get svc mlbparks -o template --template="{{ .spec.clusterIP }}")`
-      - `curl $MLB_SVC_IP:8080`
+    - `oc expose svc/mlbparks`
+    - `export MLB_ROUTE=$(oc get route mlbparks -o template --template="{{ .spec.host }}")`
+    - `curl $MLB_ROUTE`
