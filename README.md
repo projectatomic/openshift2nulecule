@@ -1,79 +1,155 @@
 # OpenShift2Nulecule
 
-This tool is creating new Nulecule application with Kubernetes
-artifacts from OpenShift project.
+This tool creates a Nulecule application that has Kubernetes and OpenShift
+artifacts based on an existing OpenShift project.
 
+OpenShift2Nulecule creates a nulecule file with artifacts.  Images are
+not exported or included in the application.  Images are optionally able
+to be exported from the OpenShift registry to another registry.
 
 ## Limitations
- - Exports only `ReplicationControllers`, `PersistentVolumeClaims`, `Services` for *Kubernetes*.
- - Exports only `service`, `deploymentConfig`, `buildConfig`, `imageStream`, `replicationController`,
-   `persistentVolumeClaim` for *Openshift*, other objects like `build`, `imageStreamTag`, `imageStreamImage`,
-   `event`, `node`, `pod`, `persistentVolume`,  are not exported at the moment.
- - You probably still need go through artifact and change hostnames and ip address.
 
+### Exported Artifacts
 
-# External dependencies
-OpenShift client (`oc`) has to be installed and configured to 
-connect to OpenShift server.
+OpenShift2Nulecule creates only the following Kubernetes configurations:
 
-You can provide path to `oc` binary using `--oc` argument.
-If you need pass `--config` option to `oc` binary, you can do that using `--oc-config` argument.
+  - ReplicationControllers
+  - PersistentVolumeClaims
+  - Services
+
+OpenShift2Nulecule creates only the following OpenShift configurations:
+
+  - service
+  - deploymentConfig
+  - buildConfig
+  - imageStream
+  - replicationController
+  - persistentVolumeClaim
+
+  Specifically, OpenShift2Nulecule does not export these OpenShift
+  configurations:
+
+    - build
+    - imageStreamTag
+    - imageStreamImage
+    - event
+    - node
+    - pod
+    - persistentVolume
+ 
+**You advised to carefully review the created artifacts and change
+hostnames and ip addresses.**
+
+For more information about
+OpenShift object types, please see the [OpenShift
+Documentation](https://docs.openshift.com/enterprise/3.0/cli_reference/basic_cli_operations.html#object-types)
+on this topic.
+
+### Kubernetes Usage
+
+OpenShift applications exported for use with Kubernetes by
+OpenShift2Nulecule will not be setup to be built from source (s2i).
+They will export the last successfully built images from OpenShift to
+be launched by Kubernetes.
+
+# External Dependencies
+
+The OpenShift client (`oc`) has to be installed and configured to connect
+to OpenShift server.  Additionally, the workstation running
+`openshift2nulecule` must have a working copy of the `docker` cli
+installed.
+
+You can provide the path to `oc` binary using `--oc` argument. If you
+need to pass a `--config` option to the `oc` binary, use the `--oc-config`
+option.
 
 # Usage
-Before running this you have to be authenticated to OpenShift using `oc login` command. (see [Basic Setup and Login](https://docs.openshift.com/enterprise/3.0/cli_reference/get_started_cli.html#basic-setup-and-login)).
 
-- Export whole project
+Before running OpenShift2Nulecule you have to be
+authenticated to OpenShift using the `oc login`
+command. For more information, see [Basic Setup and
+Login](https://docs.openshift.com/enterprise/3.0/cli_reference/get_started_cli.html#basic-setup-and-login).
+
+## Export A Whole Project
 
 ```sh
-openshift2nulecule --output=/path/to/new/myapp --project=myproject
+openshift2nulecule --output /path/to/new/myapp --project myproject
 ```
-This will export whole project `myproject` from OpenShift
-and create new Nulecule application in `/path/to/new/myapp` directory.
+This will export the whole OpenShift project, `myproject`, and create
+a new Nulecule application in the `/path/to/new/myapp` directory.
 
-- Selectively export an application based on labels
+## Selectively Export an Application Based on Labels
 
 ```bash
-openshift2nulecule --project hexboard --output ~/exported/hexboard --selector app=sketchpod
+openshift2nulecule --output ~/exported/hexboard --project hexboard --selector app=sketchpod
 ```
 
-## Exporting images from OpenShift
-This tool has also support for exporting images from internal OpenShift Docker registry.
-First you need to secure and expose internal registry using route. Instructions on how to
-setup this are in [official OpenShift documentation](https://docs.openshift.org/latest/install_config/install/docker_registry.html#exposing-the-registry)
-
-Arguments related to exporting images:
- - `--export-images` - Which images should be exported from OpenShift. Options are:
-                     "all", "internal", "none".
-   - *all* - pulls all images that are specified in artifacts even if they are not in
-             OpenShift internal registry
-   - *internal* - pull only images from internal OpenShift Docker registry
-   - *none* - no images are pulled (default)
- - `--oc-registry-host` - Host of exposed internal OpenShift Docker registry.
-                        (Host of docker-registry route)
- - `--registry-host` - Host of registry where images that were to push images
-                     pulled from OpenShift internal registry.
- - `--registry-login` - username ans password for authentication to Docker registry
-                      (if it is required)
+This will export the just the `sketchpod` application from the OpenShift
+project, `myproject`, and create a new Nulecule application in the
+`/path/to/new/myapp` directory.
 
 
-Following example will pull all images that are used in project and  will push them to `localhost:5000` registry.
+## Exporting Images From OpenShift
+
+This tool has also support for exporting images from the
+OpenShift internal registry.  To use this you need to
+secure and expose the OpenShift internal registry using
+`route`. For instructions please see the [official OpenShift
+documentation](https://docs.openshift.org/latest/install_config/install/docker_registry.html#exposing-the-registry).
+
+The following example will export all images that are used in the project
+and push them to the registry at `localhost:5000`.
+
 ```sh
-openshift2nulecule --project mlb --output ./myapp --oc-registry-host docker-registry.cdk.10.2.2.2.xip.io --export-images all --registry-host localhost:5000 
+openshift2nulecule --output ./myapp --project mlb --oc-registry-host docker-registry.cdk.10.2.2.2.xip.io --export-images all --registry-host localhost:5000 
 ```
+For testing you might want to skip push stage. You can do this by adding
+`--skip-push` option.  With this option openshift2nulecule will only
+pull images to you local docker cache.
 
-For testing you might want to skip push stage. You can do this by adding `--skip-push` option.
-With this option openshift2nulecule will only pull images to you local docker instance.
+
+## Arguments
+
+General Arguments:
+  - `--output` - The path to where the nulecule application should
+                 be written.  Can be space or equal separated.
+  - `--selector` - A set of `key=value` statements that describe what
+                   elements of the OpenShift project should be exported.
+  - `--project` - The OpenShift project to operate on. 
+  - `--oc` - The path to the `oc` binary.
+  - `--oc-config` - Any arguments that should be passed using the `oc`
+                    binary's `--config` argument.
+
+The following arguments are related to exporting images:
+
+  - `--export-images` - Which images should be exported from
+                        OpenShift. Options are: "all", "internal", "none".
+    - *all* - Pulls all images that are specified in artifacts even if
+              they are not in the OpenShift internal registry and must
+              be downloaded from an external registry.
+    - *internal* - Pull only images from the OpenShift internal registry.
+    - *none* - No images are pulled. (default)
+  - `--oc-registry-host` - Hostname of the exposed OpenShift internal
+                           registry.  (Host of the `docker-registry`
+                           route.)
+  - `--registry-host` - Hostname of registry to push images too.
+  - `--registry-login` - The Username and password for authenticating to 
+                         the registry which will be pushed too,
+                         if required.
+  - `--skip-push` - Only pull the images to the local docker cache, do not
+                    push them to the new registry.
 
 # Installation
-RPMs: https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/
 
-You can also run `openshift2nulecule` as Docker container (see "Usage" section).
+RPMs for use with Fedora, CentOS, and Red Hat Enterprise Linux are
+available in COPR at:
 
+`https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/`
 
-## CentOS7/RHEL7
+Specific Operating System instructions are below
 
+## CentOS 7 and CentOS Atomic Developer Bundle (ADB)
 
-### CentOS7 (ADB)
 ```sh
 # enable epel
 yum install epel-release
@@ -85,10 +161,12 @@ curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-
 yum install openshift2nulecule
 ```
 
-### CDK
- Already installed out of the box.
+## Red Hat Enterprise Linux Container Development Kit (CDK)
 
-### RHEL7
+Installed by default.
+
+### Red Hat Enterprise Linux 7
+
 ```
 # enable optional repositories
 subscription-manager repos --enable rhel-7-server-optional-rpms 
@@ -106,9 +184,9 @@ curl  https://copr.fedorainfracloud.org/coprs/tkral/openshift2nulecle/repo/epel-
 yum install openshift2nulecule
 ```
 
-
 ## Running as Docker container
-Easies way how to run openshift2nulecule as Docker container is to use [Atomic](https://github.com/projectatomic/atomic) tool.
+
+OpenShift2Nulecule can also be run in a Docker container.  It is easier to do when using the [Atomic CLI](https://github.com/projectatomic/atomic).
 
 ```sh
 atomic run tomaskral/openshift2nulecule \
@@ -119,10 +197,14 @@ atomic run tomaskral/openshift2nulecule \
   --export-images all \
   --registry-host my_registry:5000
 ```
-When you are running openshift2nulecule from container, you have to always specify path to `oc` configuration file (`--oc-config`)
-in most cases setting it to default `$HOME/.kube/config` should be enough.
 
-Example of running openshift2nulecule container without Atomic tool:
+**Note:** When running openshift2nulecule in a container, you must always
+specify the path to the `oc` configuration file using the `--oc-config`
+argument.  In most cases, the default value of `$HOME/.kube/config`
+should work.
+
+Example of running the openshift2nulecule container without the Atomic CLI:
+
 ```sh
 docker run -it --rm --privileged --net=host \
   -v /var/run/docker.sock:/var/run/docker.sock \
@@ -134,11 +216,4 @@ docker run -it --rm --privileged --net=host \
   --oc-registry-host 172.30.22.38:5000 \
   --export-images all \
   --registry-host my_registry:5000
-
 ```
-
-# Notes
-
-### References
-  - Exposing the Registry - https://docs.openshift.org/latest/install_config/install/docker_registry.html#exposing-the-registry
-  - Openshift object types - https://docs.openshift.com/enterprise/3.0/cli_reference/basic_cli_operations.html#object-types
