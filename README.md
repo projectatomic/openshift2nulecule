@@ -12,30 +12,26 @@ to be exported from the OpenShift registry to another registry.
 ### Exported Artifacts
 
 OpenShift2Nulecule creates only the following Kubernetes configurations:
-
   - ReplicationControllers
   - PersistentVolumeClaims
   - Services
 
 OpenShift2Nulecule creates only the following OpenShift configurations:
+  - Service
+  - DeploymentConfig
+  - BuildConfig
+  - ImageStream
+  - ReplicationController
+  - PersistentVolumeClaim
 
-  - service
-  - deploymentConfig
-  - buildConfig
-  - imageStream
-  - replicationController
-  - persistentVolumeClaim
-
-  Specifically, OpenShift2Nulecule does not export these OpenShift
-  configurations:
-
-    - build
-    - imageStreamTag
-    - imageStreamImage
-    - event
-    - node
-    - pod
-    - persistentVolume
+Specifically, OpenShift2Nulecule does not export these OpenShift configurations:
+  - Build
+  - ImageStreamTag
+  - ImageStreamImage
+  - Event
+  - Node
+  - Pod
+  - PersistentVolume
  
 **You advised to carefully review the created artifacts and change
 hostnames and ip addresses.**
