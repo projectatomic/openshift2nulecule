@@ -21,7 +21,7 @@ def _install_requirements():
 
 setup(
     name='openshift2nulecule',
-    version='0.0.1',
+    version='0.1.0',
     description='A tool to create Nulecule from OpenShift',
     author='Tomas Kral',
     author_email='tkral@redhat.com',
